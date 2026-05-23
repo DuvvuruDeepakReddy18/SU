@@ -1,0 +1,68 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "MEILI_HOST",
+    "MEILI_KEY",
+    "S3_ENDPOINT",
+    "S3_BUCKET",
+    "S3_KEY",
+    "S3_SECRET",
+    "S3_REGION",
+    "S3_PUBLIC_URL",
+    "JWT_SECRET",
+    "ENCRYPTION_KEY",
+    "NEXTAUTH_SECRET",
+    "NEXTAUTH_URL",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "GITHUB_CLIENT_ID",
+    "GITHUB_CLIENT_SECRET",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_RESUME_MODEL",
+    "OPENROUTER_RESUME_FALLBACKS",
+    "OPENROUTER_FEEDBACK_MODEL",
+    "OPENROUTER_FEEDBACK_FALLBACKS",
+    "OPENROUTER_SITE_URL",
+    "OPENROUTER_APP_NAME",
+    "JUDGE0_URL",
+    "JUDGE0_KEY",
+    "RESEND_API_KEY",
+    "API_URL",
+    "API_INTERNAL_URL"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "generate": {
+      "cache": false
+    },
+    "migrate": {
+      "cache": false
+    },
+    "seed": {
+      "cache": false
+    }
+  }
+}

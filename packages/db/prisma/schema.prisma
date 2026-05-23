@@ -1,0 +1,428 @@
+// SkillVerify — Prisma schema
+// Multi-role model included up-front so we don't need to migrate later.
+// Only STUDENT-facing endpoints are wired up in Phase 1.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+enum UserRole {
+  STUDENT
+  RECRUITER
+  INSTITUTION_ADMIN
+  INTERVIEWER
+  PLATFORM_ADMIN
+}
+
+enum VerificationLayer {
+  L0_UNVERIFIED
+  L1_ACADEMIC
+  L2_CERTIFIED
+  L3_PROVEN
+  L4_EXPERT
+}
+
+enum CertificationTier {
+  TIER_1
+  TIER_2
+  TIER_3
+  UNRANKED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  role          UserRole  @default(STUDENT)
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  studentProfile        StudentProfile?
+  userSkills            UserSkill[]
+  certifications        Certification[]
+  projects              Project[]
+  academicRecords       AcademicRecord[]
+  externalIntegrations  ExternalIntegration[]
+  submissions           Submission[]
+  communityPosts        CommunityPost[]
+  notifications         Notification[]
+  votes                 CommunityVote[]
+  interviewBookings     InterviewBooking[]
+  postedDrives          PlacementDrive[] @relation("PostedDrives")
+  placementApplications PlacementApplication[]
+  postedCompetitions    Competition[]    @relation("PostedCompetitions")
+  competitionEntries    CompetitionEntry[]
+  providedServices      FreelanceService[] @relation("ProvidedServices")
+
+  @@index([institutionId])
+}
+
+model Institution {
+  id            String  @id @default(cuid())
+  name          String
+  domain        String  @unique
+  tier          String?
+  licenseStatus String  @default("trial")
+  users         User[]
+  createdAt     DateTime @default(now())
+}
+
+model StudentProfile {
+  userId         String  @id
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName       String
+  headline       String?
+  bio            String?
+  avatarUrl      String?
+  resumeUrl      String?
+  cgpa           Float?
+  graduationYear Int?
+  sharableSlug   String  @unique
+  phone          String?
+  location       String?
+  geoLat         Float?
+  geoLng         Float?
+  // Social / profile links — extracted by the resume parser when present.
+  linkedinUrl    String?
+  githubUrl      String?
+  leetcodeUrl    String?
+  codechefUrl    String?
+  portfolioUrl   String?
+  isPublic       Boolean @default(true)
+  updatedAt      DateTime @updatedAt
+}
+
+model SkillCatalog {
+  id             String          @id @default(cuid())
+  name           String          @unique
+  category       String
+  parentSkillId  String?
+  parent         SkillCatalog?   @relation("Children", fields: [parentSkillId], references: [id])
+  children       SkillCatalog[]  @relation("Children")
+  userSkills     UserSkill[]
+  certifications Certification[]
+  tierRules      CertificationTierRule[]
+
+  @@index([category])
+}
+
+model UserSkill {
+  id                       String            @id @default(cuid())
+  userId                   String
+  user                     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId                  String
+  skill                    SkillCatalog      @relation(fields: [skillId], references: [id])
+  selfRatedLevel           Int               @default(1)
+  highestVerificationLayer VerificationLayer @default(L0_UNVERIFIED)
+  createdAt                DateTime          @default(now())
+
+  @@unique([userId, skillId])
+  @@index([skillId])
+}
+
+model Certification {
+  id                 String            @id @default(cuid())
+  userId             String
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId            String?
+  skill              SkillCatalog?     @relation(fields: [skillId], references: [id])
+  issuer             String
+  courseName         String
+  issuedAt           DateTime?
+  certificateUrl     String?
+  verificationUrl    String?
+  tier               CertificationTier @default(UNRANKED)
+  verificationStatus String            @default("pending")
+  createdAt          DateTime          @default(now())
+
+  @@index([userId])
+}
+
+model CertificationTierRule {
+  id         String            @id @default(cuid())
+  issuer     String
+  courseName String
+  skillId    String?
+  skill      SkillCatalog?     @relation(fields: [skillId], references: [id])
+  tier       CertificationTier
+
+  @@unique([issuer, courseName])
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source       String   // "github" | "manual"
+  title        String
+  description  String?
+  repoUrl      String?
+  liveUrl      String?
+  techStack    String[]
+  stars        Int      @default(0)
+  lastCommitAt DateTime?
+  linkedSkills String[]
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AcademicRecord {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  semester    Int
+  cgpa        Float
+  sgpa        Float?
+  docUrl      String?
+  verifiedVia String    // "digilocker" | "institution" | "manual"
+  verifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model ExternalIntegration {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider              String   // "github" | "linkedin" | "leetcode" | "coursera"
+  providerUserId        String?
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  lastSyncedAt          DateTime?
+  syncStatus            String   @default("idle")
+  createdAt             DateTime @default(now())
+
+  @@unique([userId, provider])
+}
+
+model Problem {
+  id           String           @id @default(cuid())
+  title        String
+  slug         String           @unique
+  difficulty   String           // "easy" | "medium" | "hard"
+  topics       String[]
+  description  String
+  constraints  String?
+  examplesJson Json
+  starterCode  Json?            // { python, javascript, cpp, java }
+  points       Int              @default(10)
+  testCases    TestCase[]
+  submissions  Submission[]
+  domains      PracticeDomain[] @relation("DomainProblems")
+  createdAt    DateTime         @default(now())
+}
+
+model TestCase {
+  id        String  @id @default(cuid())
+  problemId String
+  problem   Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  input     String
+  output    String
+  isHidden  Boolean @default(true)
+}
+
+model Submission {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemId   String
+  problem     Problem  @relation(fields: [problemId], references: [id])
+  language    String
+  code        String
+  verdict     String   // "AC" | "WA" | "TLE" | "RE" | "CE" | "PENDING"
+  runtimeMs   Int?
+  memoryKb    Int?
+  aiFeedback  Json?
+  // For non-AC verdicts we capture the first failing test case + its diff so
+  // the student can see what their code actually printed vs what was expected.
+  failedTest  Json?   // { input, expectedOutput, gotStdout, stderr, compileOutput }
+  testsPassed Int?
+  testsTotal  Int?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([problemId])
+}
+
+model CommunityPost {
+  id          String          @id @default(cuid())
+  authorId    String
+  author      User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isAnonymous Boolean         @default(false)
+  body        String
+  tags        String[]
+  visibility  String          @default("public") // "public" | "college_only"
+  upvotes     Int             @default(0)
+  downvotes   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  votes       CommunityVote[]
+
+  @@index([createdAt])
+}
+
+model CommunityVote {
+  id        String        @id @default(cuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value     Int           // -1 | 1
+  createdAt DateTime      @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model LeaderboardSnapshot {
+  id         String   @id @default(cuid())
+  userId     String
+  scope      String   // "global" | "college:<id>" | "skill:<id>"
+  score      Int
+  rank       Int
+  computedAt DateTime @default(now())
+
+  @@index([scope, rank])
+  @@index([userId, scope])
+}
+
+// ---------- Practice domains (Algorithms, Python, SQL, ...) ----------
+model PracticeDomain {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String?
+  icon        String?   // lucide icon name
+  sortOrder   Int       @default(0)
+  problems    Problem[] @relation("DomainProblems")
+}
+
+// Optional domain link on Problem (added without breaking existing relations).
+// Defined via the relation above; Problem's side is a many-to-many through
+// implicit table, since one problem can belong to multiple domains
+// (e.g. Two Sum → Algorithms + Data Structures + Python).
+
+// ---------- L4 Expert Interview bookings ----------
+model InterviewBooking {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId     String?
+  scheduledAt DateTime
+  status      String   @default("scheduled") // "scheduled" | "passed" | "failed" | "cancelled" | "no_show"
+  notes       String?
+  panelNotes  String?
+  result      String?  // "L4_VERIFIED" | "FEEDBACK_ONLY"
+  createdAt   DateTime @default(now())
+
+  @@index([userId, scheduledAt])
+}
+
+// ---------- Campus placement drives ----------
+model PlacementDrive {
+  id          String   @id @default(cuid())
+  postedById  String
+  postedBy    User     @relation("PostedDrives", fields: [postedById], references: [id], onDelete: Cascade)
+  company     String
+  role        String
+  description String?
+  packageLpa  Float?
+  minLevel    String   @default("L0") // "L0" | "L1_ACADEMIC" | "L2_CERTIFIED" | "L3_PROVEN" | "L4_EXPERT"
+  jobType     String   @default("full_time") // "full_time" | "internship" | "contract" | "ppo"
+  skills      String[]
+  location    String?
+  scope       String   @default("institute_only") // "institute_only" | "public"
+  institutionId String?
+  closesAt    DateTime?
+  createdAt   DateTime @default(now())
+  applications PlacementApplication[]
+
+  @@index([institutionId])
+  @@index([jobType])
+}
+
+model PlacementApplication {
+  id        String         @id @default(cuid())
+  driveId   String
+  drive     PlacementDrive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String         @default("applied") // "applied" | "shortlisted" | "rejected" | "hired"
+  createdAt DateTime       @default(now())
+
+  @@unique([driveId, userId])
+}
+
+// ---------- Competitions (compete tab) ----------
+model Competition {
+  id          String   @id @default(cuid())
+  title       String
+  category    String   // "case" | "video_editing" | "marketing" | "debate" | "art" | "competitive_programming" | "hackathon"
+  description String
+  prizes      String?  // free text or JSON
+  startsAt    DateTime
+  endsAt      DateTime
+  bannerUrl   String?
+  postedById  String?
+  postedBy    User?    @relation("PostedCompetitions", fields: [postedById], references: [id])
+  entries     CompetitionEntry[]
+  createdAt   DateTime @default(now())
+
+  @@index([category, startsAt])
+}
+
+model CompetitionEntry {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submissionUrl String?
+  notes         String?
+  rank          Int?
+  createdAt     DateTime    @default(now())
+
+  @@unique([competitionId, userId])
+}
+
+// ---------- Freelance marketplace ----------
+model FreelanceService {
+  id          String   @id @default(cuid())
+  providerId  String
+  provider    User     @relation("ProvidedServices", fields: [providerId], references: [id], onDelete: Cascade)
+  title       String
+  category    String   // "development" | "design" | "marketing" | "data_science" | "video_editing" | "writing" | "other"
+  description String
+  priceFrom   Float?
+  priceUnit   String?  // "hour" | "project" | "month"
+  skills      String[]
+  location    String?
+  isRemote    Boolean  @default(true)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([providerId])
+}

@@ -1,0 +1,55 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
+
+import { PrismaModule } from './infra/prisma/prisma.module';
+import { RedisModule } from './infra/redis/redis.module';
+import { StorageModule } from './infra/storage/storage.module';
+import { QueueModule } from './infra/queue/queue.module';
+import { OpenRouterModule } from './infra/openrouter/openrouter.module';
+import { HealthController } from './common/health.controller';
+
+import { AuthModule } from './modules/auth/auth.module';
+import { ProfileModule } from './modules/profile/profile.module';
+import { SkillsModule } from './modules/skills/skills.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { VerificationsModule } from './modules/verifications/verifications.module';
+import { PracticeModule } from './modules/practice/practice.module';
+import { CommunityModule } from './modules/community/community.module';
+import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { DomainsModule } from './modules/domains/domains.module';
+import { InterviewsModule } from './modules/interviews/interviews.module';
+import { PlacementsModule } from './modules/placements/placements.module';
+import { CompetitionsModule } from './modules/competitions/competitions.module';
+import { FreelanceModule } from './modules/freelance/freelance.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    PrismaModule,
+    RedisModule,
+    StorageModule,
+    QueueModule,
+    OpenRouterModule,
+    AuthModule,
+    ProfileModule,
+    SkillsModule,
+    IntegrationsModule,
+    VerificationsModule,
+    PracticeModule,
+    CommunityModule,
+    LeaderboardModule,
+    NotificationsModule,
+    DomainsModule,
+    InterviewsModule,
+    PlacementsModule,
+    CompetitionsModule,
+    FreelanceModule,
+  ],
+  controllers: [HealthController],
+})
+export class AppModule {}

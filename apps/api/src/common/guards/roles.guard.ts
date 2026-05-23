@@ -1,0 +1,24 @@
+import { CanActivate, type ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import type { UserRole } from '@prisma/client';
+import type { JwtPayload } from '@skillverify/shared';
+import { ROLES_KEY } from '../decorators/roles.decorator';
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private readonly reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const required = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!required || required.length === 0) return true;
+    const { user } = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
+    if (!user) throw new ForbiddenException('Not authenticated');
+    if (!required.includes(user.role)) {
+      throw new ForbiddenException(`Required role: ${required.join(' or ')}`);
+    }
+    return true;
+  }
+}

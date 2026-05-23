@@ -1,0 +1,127 @@
+# Local development services for SkillVerify.
+# Bring everything up with: docker compose up -d
+# Shut down with:           docker compose down
+# Reset state:              docker compose down -v
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: sv-postgres
+    environment:
+      POSTGRES_USER: skillverify
+      POSTGRES_PASSWORD: skillverify
+      POSTGRES_DB: skillverify
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U skillverify -d skillverify']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: sv-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    container_name: sv-meili
+    environment:
+      MEILI_MASTER_KEY: masterKeyChangeMe
+      MEILI_NO_ANALYTICS: 'true'
+    ports:
+      - '7700:7700'
+    volumes:
+      - meilidata:/meili_data
+
+  minio:
+    image: minio/minio:latest
+    container_name: sv-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-bootstrap:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb --ignore-existing local/skillverify;
+      mc anonymous set download local/skillverify;
+      "
+
+  # Judge0 — code execution sandbox.
+  # Splits the API, worker, postgres, redis, RabbitMQ into separate containers
+  # per the upstream docker-compose recipe.
+  judge0-db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+      POSTGRES_DB: judge0
+    volumes:
+      - judge0_pgdata:/var/lib/postgresql/data
+
+  judge0-redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--requirepass', 'judge0']
+
+  judge0-api:
+    image: judge0/judge0:1.13.1
+    container_name: sv-judge0-api
+    ports:
+      - '2358:2358'
+    environment:
+      REDIS_HOST: judge0-redis
+      REDIS_PASSWORD: judge0
+      POSTGRES_HOST: judge0-db
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+      POSTGRES_DB: judge0
+      RAILS_MAX_THREADS: '10'
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    privileged: true
+
+  judge0-worker:
+    image: judge0/judge0:1.13.1
+    command: ['./scripts/workers']
+    environment:
+      REDIS_HOST: judge0-redis
+      REDIS_PASSWORD: judge0
+      POSTGRES_HOST: judge0-db
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+      POSTGRES_DB: judge0
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    privileged: true
+
+volumes:
+  pgdata:
+  redisdata:
+  meilidata:
+  miniodata:
+  judge0_pgdata:
