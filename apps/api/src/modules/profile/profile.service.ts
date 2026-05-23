@@ -53,6 +53,17 @@ export class ProfileService {
     return { resumeUrl: uploaded.url, parsed };
   }
 
+  /**
+   * Storage-free alternative: user pastes resume text, AI parses + merges.
+   * No file is saved. Used when S3 isn't configured (or as a fallback for
+   * users who don't want to upload a PDF).
+   */
+  async parseResumeText(userId: string, text: string) {
+    const parsed = await this.parser.parseText(text);
+    await this.mergeParsed(userId, parsed);
+    return { parsed };
+  }
+
   async getPublicBySlug(slug: string) {
     const profile = await this.prisma.studentProfile.findUnique({
       where: { sharableSlug: slug },

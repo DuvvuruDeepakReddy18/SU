@@ -42,6 +42,15 @@ export class ProfileController {
     return this.profile.uploadResume(u.sub, file);
   }
 
+  // Storage-free alternative — user pastes the text of their resume.
+  @Post('resume-text')
+  parseResumeText(@CurrentUser() u: JwtPayload, @Body() body: { text: string }) {
+    if (!body?.text || typeof body.text !== 'string') {
+      throw new Error('text is required');
+    }
+    return this.profile.parseResumeText(u.sub, body.text);
+  }
+
   @Public()
   @Get('public/:slug')
   publicBySlug(@Param('slug') slug: string) {

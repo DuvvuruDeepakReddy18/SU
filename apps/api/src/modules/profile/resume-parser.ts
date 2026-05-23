@@ -45,13 +45,24 @@ export class ResumeParser {
   constructor(private readonly openRouter: OpenRouterClient) {}
 
   async parse(pdfBuffer: Buffer): Promise<ResumeParseResult> {
+    const { text } = await pdfParse(pdfBuffer);
+    return this.parseText(text);
+  }
+
+  /**
+   * Parse resume from raw text (e.g. user pasted from their resume PDF or
+   * a LinkedIn export). Skips PDF parsing — same AI flow otherwise.
+   */
+  async parseText(rawText: string): Promise<ResumeParseResult> {
     if (!this.openRouter.client) {
       this.log.warn('OPENROUTER_API_KEY missing — returning empty parse result');
       return ResumeParseSchema.parse({});
     }
 
-    const { text } = await pdfParse(pdfBuffer);
-    const trimmed = text.slice(0, 30_000);
+    const trimmed = (rawText ?? '').slice(0, 30_000);
+    if (trimmed.trim().length < 30) {
+      throw new Error('Resume text is too short to parse (need at least 30 characters).');
+    }
     const models = this.modelList();
 
     const json = await this.openRouter.chatJson(

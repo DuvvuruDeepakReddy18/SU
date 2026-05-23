@@ -68,6 +68,14 @@ export default function ProfilePage() {
     if (profile) setForm(profile);
   }, [profile]);
 
+  // Feature flags — used to hide the file-upload UI when the API has no S3 config.
+  const { data: features } = useQuery({
+    queryKey: ['config'],
+    queryFn: () =>
+      api<{ storage: boolean; ai: boolean; github: boolean; google: boolean }>('/config'),
+  });
+  const storageEnabled = features?.storage ?? true;
+
   const hasResume = !!profile?.resumeUrl;
   // Heuristic for "profile not really set up yet": no headline/bio AND no skills count etc.
   // We just use "no resume" as the trigger for the onboarding hero.
@@ -82,6 +90,26 @@ export default function ProfilePage() {
     },
     onError: (e) => toast.error((e as Error).message),
   });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function summarizeParsed(parsed: any): string[] {
+    const populated: string[] = [];
+    const p = parsed ?? {};
+    if (p.fullName) populated.push('name');
+    if (p.headline) populated.push('headline');
+    if (p.bio) populated.push('bio');
+    if (p.phone) populated.push('phone');
+    if (p.location) populated.push('location');
+    if (p.linkedinUrl) populated.push('LinkedIn');
+    if (p.githubUrl) populated.push('GitHub');
+    if (p.leetcodeUrl) populated.push('LeetCode');
+    if (p.codechefUrl) populated.push('CodeChef');
+    if (p.portfolioUrl) populated.push('portfolio');
+    if (p.skills?.length) populated.push(`${p.skills.length} skills`);
+    if (p.projects?.length) populated.push(`${p.projects.length} projects`);
+    if (p.education?.length) populated.push('CGPA + graduation year');
+    return populated;
+  }
 
   async function onResume(file: File) {
     setParsing(true);
@@ -101,22 +129,37 @@ export default function ProfilePage() {
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = (await res.json()) as { parsed: any };
-      const populated: string[] = [];
-      const p = data.parsed ?? {};
-      if (p.fullName) populated.push('name');
-      if (p.headline) populated.push('headline');
-      if (p.bio) populated.push('bio');
-      if (p.phone) populated.push('phone');
-      if (p.location) populated.push('location');
-      if (p.linkedinUrl) populated.push('LinkedIn');
-      if (p.githubUrl) populated.push('GitHub');
-      if (p.leetcodeUrl) populated.push('LeetCode');
-      if (p.codechefUrl) populated.push('CodeChef');
-      if (p.portfolioUrl) populated.push('portfolio');
-      if (p.skills?.length) populated.push(`${p.skills.length} skills`);
-      if (p.projects?.length) populated.push(`${p.projects.length} projects`);
-      if (p.education?.length) populated.push('CGPA + graduation year');
-      setJustParsed(populated);
+      setJustParsed(summarizeParsed(data.parsed));
+      toast.success('Your profile has been filled in', { id: tid });
+      qc.invalidateQueries({ queryKey: ['profile.me'] });
+    } catch (err) {
+      toast.error('Resume parsing failed — ' + (err as Error).message.slice(0, 100), { id: tid });
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  async function onResumeText(text: string) {
+    if (text.trim().length < 30) {
+      toast.error('Please paste at least a few lines from your resume.');
+      return;
+    }
+    setParsing(true);
+    setJustParsed(null);
+    const tid = toast.loading('Reading your resume with AI…');
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/profile/resume-text`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt.slice(0, 300));
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = (await res.json()) as { parsed: any };
+      setJustParsed(summarizeParsed(data.parsed));
       toast.success('Your profile has been filled in', { id: tid });
       qc.invalidateQueries({ queryKey: ['profile.me'] });
     } catch (err) {
@@ -176,11 +219,16 @@ export default function ProfilePage() {
   if (!profile || profileLoading) return <ProfileSkeleton />;
 
   // --- Onboarding hero — no resume yet ---
-  if (!hasResume && !editing) {
+  if (!hasResume && !editing && !justParsed) {
     return (
       <div className="max-w-3xl">
-        <UploadHero parsing={parsing} onFile={onResume} onSkip={() => setEditing(true)} />
-        {justParsed && <ParsedSummary fields={justParsed} />}
+        <UploadHero
+          parsing={parsing}
+          storageEnabled={storageEnabled}
+          onFile={onResume}
+          onText={onResumeText}
+          onSkip={() => setEditing(true)}
+        />
       </div>
     );
   }
@@ -303,23 +351,29 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Avatar</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-4">
-            {profile.avatarUrl ? (
-              <img src={profile.avatarUrl} className="h-16 w-16 rounded-full object-cover" alt="" />
-            ) : (
-              <div className="h-16 w-16 rounded-full bg-secondary" />
-            )}
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(e) => e.target.files?.[0] && onAvatar(e.target.files[0])}
-            />
-          </CardContent>
-        </Card>
+        {storageEnabled && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Avatar</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center gap-4">
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  className="h-16 w-16 rounded-full object-cover"
+                  alt=""
+                />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-secondary" />
+              )}
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => e.target.files?.[0] && onAvatar(e.target.files[0])}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex gap-2">
           <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
@@ -344,9 +398,11 @@ export default function ProfilePage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-            <Upload className="h-4 w-4" /> Re-upload resume
-          </Button>
+          {storageEnabled && (
+            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+              <Upload className="h-4 w-4" /> Re-upload resume
+            </Button>
+          )}
           <Button size="sm" onClick={() => setEditing(true)}>
             <Pencil className="h-4 w-4" /> Edit
           </Button>
@@ -427,51 +483,112 @@ export default function ProfilePage() {
 
 function UploadHero({
   parsing,
+  storageEnabled,
   onFile,
+  onText,
   onSkip,
 }: {
   parsing: boolean;
+  storageEnabled: boolean;
   onFile: (f: File) => void;
+  onText: (t: string) => void;
   onSkip: () => void;
 }) {
+  const [mode, setMode] = useState<'upload' | 'paste'>(storageEnabled ? 'upload' : 'paste');
+  const [text, setText] = useState('');
+
   return (
     <Card className="border-dashed">
-      <CardContent className="py-10 text-center">
+      <CardContent className="py-10">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Sparkles className="h-6 w-6 text-primary" />
         </div>
-        <h2 className="text-2xl font-semibold">Start with your resume</h2>
-        <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+        <h2 className="text-2xl font-semibold text-center">Start with your resume</h2>
+        <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto text-center">
           We&apos;ll read it with AI and fill your profile — bio, skills, projects, GitHub,
           LinkedIn, CGPA — in a few seconds. You can review and tweak after.
         </p>
-        <label className="mt-6 inline-flex">
-          <input
-            type="file"
-            accept="application/pdf"
-            disabled={parsing}
-            className="hidden"
-            onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-          />
-          <span
-            className={
-              parsing
-                ? 'inline-flex items-center gap-2 rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground opacity-70'
-                : 'inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90'
-            }
-          >
-            {parsing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Reading your resume…
-              </>
-            ) : (
-              <>
-                <Upload className="h-4 w-4" /> Upload resume (PDF)
-              </>
+
+        {/* Mode tabs: upload PDF vs paste text */}
+        {storageEnabled && (
+          <div className="mt-6 flex justify-center gap-1">
+            <button
+              onClick={() => setMode('upload')}
+              className={`rounded-md border px-3 py-1 text-xs ${mode === 'upload' ? 'bg-primary text-primary-foreground' : ''}`}
+            >
+              Upload PDF
+            </button>
+            <button
+              onClick={() => setMode('paste')}
+              className={`rounded-md border px-3 py-1 text-xs ${mode === 'paste' ? 'bg-primary text-primary-foreground' : ''}`}
+            >
+              Paste text
+            </button>
+          </div>
+        )}
+
+        {mode === 'upload' && storageEnabled ? (
+          <div className="mt-6 text-center">
+            <label className="inline-flex">
+              <input
+                type="file"
+                accept="application/pdf"
+                disabled={parsing}
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+              />
+              <span
+                className={
+                  parsing
+                    ? 'inline-flex items-center gap-2 rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground opacity-70'
+                    : 'inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90'
+                }
+              >
+                {parsing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Reading your resume…
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" /> Upload resume (PDF)
+                  </>
+                )}
+              </span>
+            </label>
+          </div>
+        ) : (
+          <div className="mt-6 mx-auto max-w-xl space-y-3">
+            <textarea
+              className="flex min-h-[200px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+              placeholder="Paste your resume here — name, education, skills, projects, experience…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              disabled={parsing}
+            />
+            <Button
+              className="w-full"
+              onClick={() => onText(text)}
+              disabled={parsing || text.trim().length < 30}
+            >
+              {parsing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Reading your resume…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" /> Fill profile with AI
+                </>
+              )}
+            </Button>
+            {!storageEnabled && (
+              <p className="text-center text-xs text-muted-foreground">
+                File uploads are disabled on this deployment. Paste your resume text instead.
+              </p>
             )}
-          </span>
-        </label>
-        <div className="mt-4">
+          </div>
+        )}
+
+        <div className="mt-6 text-center">
           <button
             onClick={onSkip}
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
