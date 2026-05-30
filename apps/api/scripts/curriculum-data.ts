@@ -1927,4 +1927,587 @@ export const CURRICULUM: Exercise[] = [
     ],
     starters: s_intArrayInlineN('Implement insertion sort'),
   }),
+
+  // ===== Hashing / Frequency (8) =====
+  E({
+    title: 'Contains duplicate',
+    slug: 'curr-contains-duplicate',
+    difficulty: 'easy',
+    section: 'Hashing',
+    topics: ['Hashing', 'Arrays'],
+    description: 'N then N integers. Print "Yes" if any value appears twice, else "No".',
+    examples: [{ input: '4\n1 2 3 1', output: 'Yes' }],
+    tests: [
+      { input: '4\n1 2 3 1', output: 'Yes' },
+      { input: '4\n1 2 3 4', output: 'No' },
+      { input: '1\n7', output: 'No' },
+    ],
+    starters: s_intArrayInlineN('Use a set'),
+  }),
+  E({
+    title: 'Missing number',
+    slug: 'curr-missing-number',
+    difficulty: 'easy',
+    section: 'Hashing',
+    topics: ['Hashing', 'Math'],
+    description: 'N then N distinct integers from 0..N (one missing). Print the missing number.',
+    examples: [{ input: '3\n3 0 1', output: '2' }],
+    tests: [
+      { input: '3\n3 0 1', output: '2' },
+      { input: '1\n0', output: '1' },
+      { input: '9\n9 6 4 2 3 5 7 0 1', output: '8' },
+    ],
+    starters: s_intArrayInlineN('Sum 0..N minus arr sum'),
+  }),
+  E({
+    title: 'Single number (XOR)',
+    slug: 'curr-single-number',
+    difficulty: 'easy',
+    section: 'Hashing',
+    topics: ['Bit Manipulation', 'Arrays'],
+    description:
+      'N (odd) then N integers where every value appears twice except one. Print the unique one.',
+    examples: [{ input: '5\n2 2 1 4 4', output: '1' }],
+    tests: [
+      { input: '5\n2 2 1 4 4', output: '1' },
+      { input: '1\n7', output: '7' },
+      { input: '3\n1 1 9', output: '9' },
+    ],
+    starters: s_intArrayInlineN('XOR all values'),
+  }),
+  E({
+    title: 'Most frequent element',
+    slug: 'curr-most-frequent',
+    difficulty: 'easy',
+    section: 'Hashing',
+    topics: ['Hashing', 'Arrays'],
+    description:
+      'N then N integers. Print the value that appears most often (ties broken by lower value).',
+    examples: [{ input: '6\n1 2 2 3 2 1', output: '2' }],
+    tests: [
+      { input: '6\n1 2 2 3 2 1', output: '2' },
+      { input: '3\n5 5 5', output: '5' },
+      { input: '2\n1 2', output: '1' },
+    ],
+    starters: s_intArrayInlineN('Frequency map'),
+  }),
+  E({
+    title: 'Two sum (sorted)',
+    slug: 'curr-two-sum-sorted',
+    difficulty: 'easy',
+    section: 'Hashing',
+    topics: ['Two Pointers', 'Arrays'],
+    description:
+      'N then N sorted integers then target T. Print 1-indexed pair "i j" (i<j) that sums to T, or "-1".',
+    examples: [{ input: '4\n2 7 11 15\n9', output: '1 2' }],
+    tests: [
+      { input: '4\n2 7 11 15\n9', output: '1 2' },
+      { input: '3\n1 3 4\n7', output: '2 3' },
+      { input: '3\n1 2 3\n100', output: '-1' },
+    ],
+    starters: {
+      python: py(
+        `lines = data.split("\\n")\nn = int(lines[0])\narr = list(map(int, lines[1].split()))\nt = int(lines[2])\n# two pointers\nprint()`,
+      ),
+      javascript: js(
+        `const lines = data.split(/\\n/);\nconst arr = lines[1].split(/\\s+/).map(Number);\nconst t = parseInt(lines[2], 10);\nconsole.log("");`,
+      ),
+      c: cMain(
+        `    int n, t; scanf("%d", &n);\n    int *arr = malloc(n * sizeof(int));\n    for (int i = 0; i < n; i++) scanf("%d", &arr[i]);\n    scanf("%d", &t);\n    printf("\\n");\n    free(arr);`,
+      ),
+      cpp: cppMain(
+        `    int n, t; cin >> n;\n    vector<int> arr(n); for (auto& x : arr) cin >> x;\n    cin >> t;\n    cout << endl;`,
+      ),
+      java: javaMain(
+        `        int n = sc.nextInt();\n        int[] arr = new int[n];\n        for (int i = 0; i < n; i++) arr[i] = sc.nextInt();\n        int t = sc.nextInt();\n        System.out.println();`,
+      ),
+    },
+  }),
+  E({
+    title: 'Intersection of two arrays',
+    slug: 'curr-intersection-arrays',
+    difficulty: 'easy',
+    section: 'Hashing',
+    topics: ['Hashing', 'Arrays'],
+    description:
+      'Four lines: M, M integers, N, N integers. Print distinct values present in BOTH, ascending, space-separated.',
+    examples: [{ input: '4\n1 2 2 1\n2\n2 2', output: '2' }],
+    tests: [
+      { input: '4\n1 2 2 1\n2\n2 2', output: '2' },
+      { input: '3\n1 2 3\n3\n3 4 5', output: '3' },
+      { input: '2\n1 2\n2\n3 4', output: '' },
+    ],
+    starters: {
+      python: py(
+        `lines = data.split("\\n")\na = set(map(int, lines[1].split()))\nb = set(map(int, lines[3].split()))\nout = sorted(a & b)\nprint(' '.join(map(str, out)) if out else '')`,
+      ),
+      javascript: js(
+        `const lines = data.split(/\\n/);\nconst A = new Set(lines[1].split(/\\s+/).map(Number));\nconst B = new Set(lines[3].split(/\\s+/).map(Number));\nconst out = [...A].filter((x) => B.has(x)).sort((a, b) => a - b);\nconsole.log(out.join(' '));`,
+      ),
+      c: cMain(`    /* TODO: read both arrays, intersect */\n    printf("\\n");`),
+      cpp: cppMain(`    /* TODO */\n    cout << endl;`),
+      java: javaMain(`        /* TODO */\n        System.out.println();`),
+    },
+  }),
+  E({
+    title: 'Word frequency',
+    slug: 'curr-word-frequency',
+    difficulty: 'easy',
+    section: 'Hashing',
+    topics: ['Hashing', 'Strings'],
+    description:
+      'Read one line of space-separated words. Print each distinct word with its count, ascending by word, one "word count" per line.',
+    examples: [{ input: 'a b a c a b', output: 'a 3\nb 2\nc 1' }],
+    tests: [
+      { input: 'a b a c a b', output: 'a 3\nb 2\nc 1' },
+      { input: 'hello', output: 'hello 1' },
+      { input: 'foo bar baz foo bar', output: 'bar 2\nbaz 1\nfoo 2' },
+    ],
+    starters: s_oneString('Split, count, sort by word'),
+  }),
+  E({
+    title: 'Top frequent element',
+    slug: 'curr-top-frequent-1',
+    difficulty: 'medium',
+    section: 'Hashing',
+    topics: ['Hashing', 'Heap'],
+    description: 'N then N integers. Print the most frequent value (ties broken by lower value).',
+    examples: [{ input: '6\n1 1 1 2 2 3', output: '1' }],
+    tests: [
+      { input: '6\n1 1 1 2 2 3', output: '1' },
+      { input: '1\n7', output: '7' },
+      { input: '4\n1 2 1 2', output: '1' },
+    ],
+    starters: s_intArrayInlineN('Frequency map + sort'),
+  }),
+
+  // ===== Sliding window (4) =====
+  E({
+    title: 'Max sum window of size K',
+    slug: 'curr-max-sum-window-k',
+    difficulty: 'medium',
+    section: 'Sliding Window',
+    topics: ['Sliding Window', 'Arrays'],
+    description:
+      'N, then N integers, then K. Print the maximum sum of any contiguous subarray of length K.',
+    examples: [{ input: '5\n1 4 2 10 23\n3', output: '35' }],
+    tests: [
+      { input: '5\n1 4 2 10 23\n3', output: '35' },
+      { input: '4\n1 2 3 4\n2', output: '7' },
+      { input: '3\n5 5 5\n1', output: '5' },
+    ],
+    starters: {
+      python: py(
+        `lines = data.split("\\n")\nn = int(lines[0])\narr = list(map(int, lines[1].split()))\nk = int(lines[2])\n# sliding window\nprint()`,
+      ),
+      javascript: js(
+        `const lines = data.split(/\\n/);\nconst arr = lines[1].split(/\\s+/).map(Number);\nconst k = parseInt(lines[2], 10);\nconsole.log("");`,
+      ),
+      c: cMain(
+        `    int n, k; scanf("%d", &n);\n    int *arr = malloc(n * sizeof(int));\n    for (int i = 0; i < n; i++) scanf("%d", &arr[i]);\n    scanf("%d", &k);\n    /* window */\n    printf("\\n");\n    free(arr);`,
+      ),
+      cpp: cppMain(
+        `    int n, k; cin >> n;\n    vector<int> arr(n); for (auto& x : arr) cin >> x;\n    cin >> k;\n    cout << endl;`,
+      ),
+      java: javaMain(
+        `        int n = sc.nextInt();\n        int[] arr = new int[n];\n        for (int i = 0; i < n; i++) arr[i] = sc.nextInt();\n        int k = sc.nextInt();\n        System.out.println();`,
+      ),
+    },
+  }),
+  E({
+    title: 'Longest substring without repeating',
+    slug: 'curr-longest-substring-no-repeat',
+    difficulty: 'medium',
+    section: 'Sliding Window',
+    topics: ['Sliding Window', 'Strings', 'Hashing'],
+    description:
+      'Read a string. Print the length of the longest substring with all distinct characters.',
+    examples: [{ input: 'abcabcbb', output: '3' }],
+    tests: [
+      { input: 'abcabcbb', output: '3' },
+      { input: 'bbbbb', output: '1' },
+      { input: 'pwwkew', output: '3' },
+    ],
+    starters: s_oneString('Sliding window + set'),
+  }),
+  E({
+    title: 'Count distinct characters in window',
+    slug: 'curr-distinct-chars-window',
+    difficulty: 'medium',
+    section: 'Sliding Window',
+    topics: ['Sliding Window', 'Strings'],
+    description:
+      'Two lines: a string s and integer k. Print the maximum number of distinct characters in any substring of length k.',
+    examples: [{ input: 'abcabc\n3', output: '3' }],
+    tests: [
+      { input: 'abcabc\n3', output: '3' },
+      { input: 'aaaa\n2', output: '1' },
+      { input: 'abcd\n4', output: '4' },
+    ],
+    starters: {
+      python: py(`s, k = data.split("\\n")\nk = int(k)\n# window\nprint()`),
+      javascript: js(
+        `const [s, kStr] = data.split(/\\n/);\nconst k = parseInt(kStr, 10);\nconsole.log("");`,
+      ),
+      c: cMain(
+        `    char s[1024]; int k;\n    fgets(s, sizeof(s), stdin); s[strcspn(s, "\\n")] = 0;\n    scanf("%d", &k);\n    printf("\\n");`,
+      ),
+      cpp: cppMain(`    string s; int k;\n    getline(cin, s); cin >> k;\n    cout << endl;`),
+      java: javaMain(
+        `        String s = sc.nextLine();\n        int k = sc.nextInt();\n        System.out.println();`,
+      ),
+    },
+  }),
+  E({
+    title: 'Window min element',
+    slug: 'curr-window-min',
+    difficulty: 'medium',
+    section: 'Sliding Window',
+    topics: ['Sliding Window', 'Arrays'],
+    description:
+      'N, then N integers, then K. Print K-window minimums (N-K+1 numbers space-separated).',
+    examples: [{ input: '6\n4 2 12 11 -5 7\n3', output: '2 2 -5 -5' }],
+    tests: [
+      { input: '6\n4 2 12 11 -5 7\n3', output: '2 2 -5 -5' },
+      { input: '3\n1 2 3\n2', output: '1 2' },
+      { input: '3\n5 5 5\n3', output: '5' },
+    ],
+    starters: {
+      python: py(
+        `lines = data.split("\\n")\narr = list(map(int, lines[1].split()))\nk = int(lines[2])\n# brute force OK for small N\nprint()`,
+      ),
+      javascript: js(
+        `const lines = data.split(/\\n/);\nconst arr = lines[1].split(/\\s+/).map(Number);\nconst k = parseInt(lines[2], 10);\nconsole.log("");`,
+      ),
+      c: cMain(
+        `    int n, k; scanf("%d", &n);\n    int *arr = malloc(n * sizeof(int));\n    for (int i = 0; i < n; i++) scanf("%d", &arr[i]);\n    scanf("%d", &k);\n    printf("\\n");\n    free(arr);`,
+      ),
+      cpp: cppMain(
+        `    int n, k; cin >> n;\n    vector<int> arr(n); for (auto& x : arr) cin >> x;\n    cin >> k;\n    cout << endl;`,
+      ),
+      java: javaMain(
+        `        int n = sc.nextInt();\n        int[] arr = new int[n];\n        for (int i = 0; i < n; i++) arr[i] = sc.nextInt();\n        int k = sc.nextInt();\n        System.out.println();`,
+      ),
+    },
+  }),
+
+  // ===== Stack patterns (4) =====
+  E({
+    title: 'Min stack length',
+    slug: 'curr-min-stack-length',
+    difficulty: 'medium',
+    section: 'Stack',
+    topics: ['Stack', 'Design'],
+    description:
+      'N then N ops: `push X`, `pop`, `min`. Print the result of each `min` (current min of the stack) or "empty".',
+    examples: [{ input: '5\npush 3\npush 1\nmin\npop\nmin', output: '1\n3' }],
+    tests: [
+      { input: '5\npush 3\npush 1\nmin\npop\nmin', output: '1\n3' },
+      { input: '3\npush 5\nmin\npop', output: '5' },
+      { input: '1\nmin', output: 'empty' },
+    ],
+    starters: {
+      python: py(
+        `lines = data.split("\\n")\nn = int(lines[0])\nstack, mins, out = [], [], []\n# maintain prefix-min on push\nprint("\\n".join(out))`,
+      ),
+      javascript: js(
+        `const lines = data.split(/\\n/);\nconst n = parseInt(lines[0], 10);\nconst stack = [], mins = [], out = [];\nconsole.log(out.join('\\n'));`,
+      ),
+      c: cMain(`    int n; scanf("%d\\n", &n);\n    /* implement */\n    `),
+      cpp: cppMain(`    int n; cin >> n; cin.ignore();\n    cout << "";\n    `),
+      java: javaMain(
+        `        int n = Integer.parseInt(sc.nextLine());\n        /* implement */\n        `,
+      ),
+    },
+  }),
+  E({
+    title: 'Evaluate postfix expression',
+    slug: 'curr-eval-postfix',
+    difficulty: 'medium',
+    section: 'Stack',
+    topics: ['Stack', 'Math'],
+    description:
+      'Read one line of space-separated tokens: integers and operators (+ - * /). Evaluate the postfix expression and print the integer result (truncate toward zero).',
+    examples: [{ input: '2 3 +', output: '5' }],
+    tests: [
+      { input: '2 3 +', output: '5' },
+      { input: '5 1 2 + 4 * + 3 -', output: '14' },
+      { input: '10 2 /', output: '5' },
+    ],
+    starters: s_oneString('Use a stack of integers'),
+  }),
+  E({
+    title: 'Next greater element',
+    slug: 'curr-next-greater',
+    difficulty: 'medium',
+    section: 'Stack',
+    topics: ['Stack', 'Arrays'],
+    description:
+      'N then N integers. For each element, print the next greater element to its right (or -1). Space-separated on one line.',
+    examples: [{ input: '4\n4 5 2 25', output: '5 25 25 -1' }],
+    tests: [
+      { input: '4\n4 5 2 25', output: '5 25 25 -1' },
+      { input: '3\n1 2 3', output: '2 3 -1' },
+      { input: '1\n7', output: '-1' },
+    ],
+    starters: s_intArrayInlineN('Monotonic stack from right to left'),
+  }),
+  E({
+    title: 'Daily temperatures',
+    slug: 'curr-daily-temps',
+    difficulty: 'medium',
+    section: 'Stack',
+    topics: ['Stack', 'Arrays'],
+    description:
+      'N then N integers (temperatures). For each day, print how many days until a warmer temperature (0 if none).',
+    examples: [{ input: '8\n73 74 75 71 69 72 76 73', output: '1 1 4 2 1 1 0 0' }],
+    tests: [
+      { input: '8\n73 74 75 71 69 72 76 73', output: '1 1 4 2 1 1 0 0' },
+      { input: '4\n30 40 50 60', output: '1 1 1 0' },
+      { input: '1\n30', output: '0' },
+    ],
+    starters: s_intArrayInlineN('Monotonic decreasing stack'),
+  }),
+
+  // ===== DP / Greedy (6) =====
+  E({
+    title: 'House robber',
+    slug: 'curr-house-robber',
+    difficulty: 'medium',
+    section: 'DP',
+    topics: ['DP', 'Arrays'],
+    description:
+      'N then N non-negative integers (house values). Cannot rob adjacent houses. Print max loot.',
+    examples: [{ input: '4\n1 2 3 1', output: '4' }],
+    tests: [
+      { input: '4\n1 2 3 1', output: '4' },
+      { input: '5\n2 7 9 3 1', output: '12' },
+      { input: '1\n5', output: '5' },
+    ],
+    starters: s_intArrayInlineN('DP: dp[i] = max(dp[i-1], dp[i-2]+a[i])'),
+  }),
+  E({
+    title: 'Coin change min coins',
+    slug: 'curr-coin-change-min',
+    difficulty: 'medium',
+    section: 'DP',
+    topics: ['DP'],
+    description:
+      'Two lines: a space-separated list of coin denominations, then target amount T. Print min coins needed, or -1.',
+    examples: [{ input: '1 2 5\n11', output: '3' }],
+    tests: [
+      { input: '1 2 5\n11', output: '3' },
+      { input: '2\n3', output: '-1' },
+      { input: '1\n0', output: '0' },
+    ],
+    starters: {
+      python: py(
+        `lines = data.split("\\n")\ncoins = list(map(int, lines[0].split()))\nt = int(lines[1])\n# DP\nprint()`,
+      ),
+      javascript: js(
+        `const lines = data.split(/\\n/);\nconst coins = lines[0].split(/\\s+/).map(Number);\nconst t = parseInt(lines[1], 10);\nconsole.log("");`,
+      ),
+      c: cMain(`    /* TODO */\n    printf("\\n");`),
+      cpp: cppMain(`    /* TODO */\n    cout << endl;`),
+      java: javaMain(`        /* TODO */\n        System.out.println();`),
+    },
+  }),
+  E({
+    title: 'Unique paths in grid',
+    slug: 'curr-unique-paths',
+    difficulty: 'medium',
+    section: 'DP',
+    topics: ['DP'],
+    description:
+      'Read m and n. Print number of unique paths from top-left to bottom-right (right or down only).',
+    examples: [{ input: '3 7', output: '28' }],
+    tests: [
+      { input: '3 7', output: '28' },
+      { input: '3 2', output: '3' },
+      { input: '1 1', output: '1' },
+    ],
+    starters: s_twoInt('DP table or formula'),
+  }),
+  E({
+    title: 'Longest increasing subsequence',
+    slug: 'curr-lis',
+    difficulty: 'hard',
+    section: 'DP',
+    topics: ['DP'],
+    description:
+      'N then N integers. Print the length of the longest strictly increasing subsequence.',
+    examples: [{ input: '8\n10 9 2 5 3 7 101 18', output: '4' }],
+    tests: [
+      { input: '8\n10 9 2 5 3 7 101 18', output: '4' },
+      { input: '6\n0 1 0 3 2 3', output: '4' },
+      { input: '4\n7 7 7 7', output: '1' },
+    ],
+    starters: s_intArrayInlineN('Patience sort or O(n log n)'),
+  }),
+  E({
+    title: 'Jump game (reach last index)',
+    slug: 'curr-jump-game',
+    difficulty: 'medium',
+    section: 'DP',
+    topics: ['Greedy', 'Arrays'],
+    description:
+      'N then N non-negative integers (max jump from each). Print "Yes" if you can reach the last index, else "No".',
+    examples: [{ input: '5\n2 3 1 1 4', output: 'Yes' }],
+    tests: [
+      { input: '5\n2 3 1 1 4', output: 'Yes' },
+      { input: '5\n3 2 1 0 4', output: 'No' },
+      { input: '1\n0', output: 'Yes' },
+    ],
+    starters: s_intArrayInlineN('Greedy: track max reachable'),
+  }),
+  E({
+    title: 'Best time to buy and sell',
+    slug: 'curr-best-buy-sell',
+    difficulty: 'easy',
+    section: 'DP',
+    topics: ['Arrays', 'DP'],
+    description:
+      'N then N integers (prices on each day). Print max profit from one buy + one later sell. 0 if impossible.',
+    examples: [{ input: '6\n7 1 5 3 6 4', output: '5' }],
+    tests: [
+      { input: '6\n7 1 5 3 6 4', output: '5' },
+      { input: '5\n7 6 4 3 1', output: '0' },
+      { input: '1\n5', output: '0' },
+    ],
+    starters: s_intArrayInlineN('Track running min'),
+  }),
+
+  // ===== Bit Manipulation (4) =====
+  E({
+    title: 'Count set bits',
+    slug: 'curr-count-set-bits',
+    difficulty: 'easy',
+    section: 'Bit Manipulation',
+    topics: ['Bit Manipulation'],
+    description:
+      'Read a non-negative integer N (<= 2^31 - 1). Print the count of 1-bits in its binary representation.',
+    examples: [{ input: '11', output: '3' }],
+    tests: [
+      { input: '11', output: '3' },
+      { input: '128', output: '1' },
+      { input: '0', output: '0' },
+    ],
+    starters: s_oneInt('n & (n-1) trick'),
+  }),
+  E({
+    title: 'Power of two',
+    slug: 'curr-power-of-two-bit',
+    difficulty: 'easy',
+    section: 'Bit Manipulation',
+    topics: ['Bit Manipulation'],
+    description: 'Read N. Print "Yes" if N is a power of 2, else "No".',
+    examples: [{ input: '16', output: 'Yes' }],
+    tests: [
+      { input: '16', output: 'Yes' },
+      { input: '6', output: 'No' },
+      { input: '1', output: 'Yes' },
+    ],
+    starters: s_oneInt('N > 0 and N & (N-1) == 0'),
+  }),
+  E({
+    title: 'XOR of range 0..N',
+    slug: 'curr-xor-range',
+    difficulty: 'easy',
+    section: 'Bit Manipulation',
+    topics: ['Bit Manipulation', 'Math'],
+    description: 'Read N. Print 0 XOR 1 XOR 2 XOR ... XOR N.',
+    examples: [{ input: '5', output: '1' }],
+    tests: [
+      { input: '5', output: '1' },
+      { input: '4', output: '4' },
+      { input: '1', output: '1' },
+    ],
+    starters: s_oneInt('Pattern: cycle of length 4'),
+  }),
+  E({
+    title: 'Add two binary strings',
+    slug: 'curr-add-binary',
+    difficulty: 'easy',
+    section: 'Bit Manipulation',
+    topics: ['Strings', 'Math'],
+    description:
+      'Two lines: binary strings a and b. Print their sum as a binary string (no leading zeros, "0" if both zero).',
+    examples: [{ input: '11\n1', output: '100' }],
+    tests: [
+      { input: '11\n1', output: '100' },
+      { input: '1010\n1011', output: '10101' },
+      { input: '0\n0', output: '0' },
+    ],
+    starters: {
+      python: py(`a, b = data.split("\\n")\nprint(bin(int(a, 2) + int(b, 2))[2:])`),
+      javascript: js(`const [a, b] = data.split(/\\n/);\nconsole.log("");`),
+      c: cMain(`    /* TODO */\n    printf("\\n");`),
+      cpp: cppMain(`    /* TODO */\n    cout << endl;`),
+      java: javaMain(`        /* TODO */\n        System.out.println();`),
+    },
+  }),
+
+  // ===== Misc (4) =====
+  E({
+    title: 'Pascal triangle row',
+    slug: 'curr-pascal-row',
+    difficulty: 'easy',
+    section: 'Math',
+    topics: ['Math'],
+    description: "Read N (>=0, <=30). Print row N of Pascal's triangle, space-separated.",
+    examples: [{ input: '4', output: '1 4 6 4 1' }],
+    tests: [
+      { input: '4', output: '1 4 6 4 1' },
+      { input: '0', output: '1' },
+      { input: '5', output: '1 5 10 10 5 1' },
+    ],
+    starters: s_oneInt('Build incrementally'),
+  }),
+  E({
+    title: 'Happy number',
+    slug: 'curr-happy-number',
+    difficulty: 'medium',
+    section: 'Math',
+    topics: ['Hashing', 'Math'],
+    description:
+      'Read N. Print "Yes" if repeatedly replacing N with the sum of the squares of its digits eventually reaches 1, else "No".',
+    examples: [{ input: '19', output: 'Yes' }],
+    tests: [
+      { input: '19', output: 'Yes' },
+      { input: '2', output: 'No' },
+      { input: '1', output: 'Yes' },
+    ],
+    starters: s_oneInt('Use set to detect cycles'),
+  }),
+  E({
+    title: 'Excel column number',
+    slug: 'curr-excel-col-num',
+    difficulty: 'easy',
+    section: 'Strings',
+    topics: ['Strings', 'Math'],
+    description:
+      'Read a column title like "AB". Print its 1-indexed column number (A=1, Z=26, AA=27, AB=28).',
+    examples: [{ input: 'AB', output: '28' }],
+    tests: [
+      { input: 'A', output: '1' },
+      { input: 'AB', output: '28' },
+      { input: 'ZY', output: '701' },
+    ],
+    starters: s_oneString('Base-26 conversion'),
+  }),
+  E({
+    title: 'Roman to integer',
+    slug: 'curr-roman-to-int',
+    difficulty: 'easy',
+    section: 'Strings',
+    topics: ['Strings', 'Hashing'],
+    description: 'Read a roman numeral string (I,V,X,L,C,D,M). Print its integer value.',
+    examples: [{ input: 'IX', output: '9' }],
+    tests: [
+      { input: 'IX', output: '9' },
+      { input: 'LVIII', output: '58' },
+      { input: 'MCMXCIV', output: '1994' },
+    ],
+    starters: s_oneString('Subtract when smaller before larger'),
+  }),
 ];

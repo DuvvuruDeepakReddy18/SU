@@ -173,6 +173,57 @@ export class PracticeService {
     return updated;
   }
 
+  /**
+   * Returns the set of problem slugs this user has AC'd at least once.
+   * Used by the UI to render checkmarks + progress bars.
+   */
+  async mySolvedSlugs(userId: string): Promise<string[]> {
+    const rows = await this.prisma.submission.findMany({
+      where: { userId, verdict: 'AC' },
+      distinct: ['problemId'],
+      select: { problem: { select: { slug: true } } },
+    });
+    return rows.map((r) => r.problem.slug);
+  }
+
+  /**
+   * Per-domain progress: total problems, count solved by this user, and
+   * a few next-suggested unsolved slugs.
+   */
+  async myProgress(userId: string) {
+    const [domains, solved] = await Promise.all([
+      this.prisma.practiceDomain.findMany({
+        orderBy: { sortOrder: 'asc' },
+        include: {
+          problems: { select: { id: true, slug: true, difficulty: true } },
+        },
+      }),
+      this.prisma.submission.findMany({
+        where: { userId, verdict: 'AC' },
+        distinct: ['problemId'],
+        select: { problemId: true },
+      }),
+    ]);
+    const solvedSet = new Set(solved.map((s) => s.problemId));
+
+    return domains.map((d) => {
+      const total = d.problems.length;
+      const solvedCount = d.problems.filter((p) => solvedSet.has(p.id)).length;
+      const nextUnsolved = d.problems
+        .filter((p) => !solvedSet.has(p.id))
+        .slice(0, 3)
+        .map((p) => p.slug);
+      return {
+        slug: d.slug,
+        name: d.name,
+        icon: d.icon,
+        total,
+        solved: solvedCount,
+        nextUnsolved,
+      };
+    });
+  }
+
   // --- AI helpers usable from the problem page (no submission required) ---
 
   async problemHint(slug: string) {

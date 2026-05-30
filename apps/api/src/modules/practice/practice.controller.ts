@@ -46,6 +46,18 @@ export class PracticeController {
     return this.svc.getSubmission(u.sub, id);
   }
 
+  // ---------- Progress ----------
+
+  @Get('me/progress')
+  myProgress(@CurrentUser() u: JwtPayload) {
+    return this.svc.myProgress(u.sub);
+  }
+
+  @Get('me/solved')
+  mySolved(@CurrentUser() u: JwtPayload) {
+    return this.svc.mySolvedSlugs(u.sub);
+  }
+
   // --- AI helpers tied to a problem (no submission needed) ---
 
   @Post('problems/:slug/hint')
