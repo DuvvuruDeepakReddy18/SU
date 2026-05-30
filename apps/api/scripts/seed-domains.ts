@@ -62,6 +62,7 @@ const DOMAINS = [
   },
   { slug: 'python', name: 'Python', icon: 'FileCode', sortOrder: 5, topics: [] },
   { slug: 'java', name: 'Java', icon: 'Coffee', sortOrder: 6, topics: [] },
+  { slug: 'javascript', name: 'JavaScript', icon: 'Braces', sortOrder: 5.5, topics: [] },
   { slug: 'c', name: 'C', icon: 'Terminal', sortOrder: 7, topics: [] },
   { slug: 'cpp', name: 'C++', icon: 'Code', sortOrder: 8, topics: [] },
   { slug: 'sql', name: 'SQL', icon: 'Database', sortOrder: 9, topics: [] },
