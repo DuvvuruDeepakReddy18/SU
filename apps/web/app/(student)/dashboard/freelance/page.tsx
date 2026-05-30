@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Briefcase, Plus, Star, MapPin, Search } from 'lucide-react';
+import { Briefcase, Plus, Star, MapPin, Search, Map as MapIcon, Inbox } from 'lucide-react';
 
 type Service = {
   id: string;
@@ -142,6 +142,16 @@ export default function FreelancePage() {
           ))}
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/dashboard/freelance/map">
+            <Button variant="outline" size="sm">
+              <MapIcon className="h-4 w-4" /> Map
+            </Button>
+          </Link>
+          <Link href="/dashboard/freelance/inquiries">
+            <Button variant="outline" size="sm">
+              <Inbox className="h-4 w-4" /> Inquiries
+            </Button>
+          </Link>
           <select
             className="rounded-md border bg-background px-3 py-1.5 text-xs"
             value={sort}

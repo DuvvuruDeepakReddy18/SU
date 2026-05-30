@@ -1,11 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
 import {
   ChevronLeft,
   Star,
@@ -58,9 +63,37 @@ function stubRating(id: string): { score: number; count: number } {
 }
 
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const { data: session } = useSession();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const token = (session as any)?.accessToken as string | undefined;
+
+  const [showInquiry, setShowInquiry] = useState(false);
+  const [brief, setBrief] = useState('');
+  const [budget, setBudget] = useState('');
+  const [deadline, setDeadline] = useState('');
+
   const { data: service } = useQuery({
     queryKey: ['service', params.id],
     queryFn: () => api<ServiceDetail | null>(`/freelance/services/${params.id}`),
+  });
+
+  const inquire = useMutation({
+    mutationFn: () =>
+      api<{ id: string }>(`/freelance/services/${params.id}/inquire`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify({
+          brief,
+          budgetInr: budget ? Number(budget) : undefined,
+          deadlineAt: deadline || undefined,
+        }),
+      }),
+    onSuccess: (data) => {
+      toast.success('Inquiry sent');
+      router.push(`/dashboard/freelance/inquiries/${data.id}`);
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   if (!service) {
@@ -142,12 +175,12 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                   </div>
                 </div>
               )}
-              <Button className="w-full" disabled>
-                <MessageCircle className="h-4 w-4" /> Contact provider
+              <Button className="w-full" onClick={() => setShowInquiry(true)} disabled={!token}>
+                <MessageCircle className="h-4 w-4" /> Send inquiry
               </Button>
-              <p className="text-[10px] text-muted-foreground text-center">
-                Booking & messaging launches in Phase 2.
-              </p>
+              {!token && (
+                <p className="text-[10px] text-muted-foreground text-center">Sign in to inquire.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -241,6 +274,60 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
           )}
         </div>
       </div>
+
+      {/* Inquiry modal */}
+      {showInquiry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="text-base">Send inquiry — {service.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <div className="mb-1 text-xs font-medium text-muted-foreground">
+                  Project brief <span className="text-destructive">*</span>
+                </div>
+                <textarea
+                  className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                  placeholder="What you need, deliverables, references, any specifics…"
+                  value={brief}
+                  onChange={(e) => setBrief(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="mb-1 text-xs font-medium text-muted-foreground">Budget (₹)</div>
+                  <Input
+                    type="number"
+                    placeholder="Optional"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <div className="mb-1 text-xs font-medium text-muted-foreground">Needed by</div>
+                  <Input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowInquiry(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => inquire.mutate()}
+                  disabled={inquire.isPending || brief.trim().length < 10}
+                >
+                  Send inquiry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

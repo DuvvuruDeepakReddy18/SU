@@ -63,7 +63,10 @@ model User {
   placementApplications PlacementApplication[]
   postedCompetitions    Competition[]    @relation("PostedCompetitions")
   competitionEntries    CompetitionEntry[]
-  providedServices      FreelanceService[] @relation("ProvidedServices")
+  providedServices         FreelanceService[]  @relation("ProvidedServices")
+  freelanceInquiriesAsClient   FreelanceInquiry[] @relation("FreelanceInquiriesAsClient")
+  freelanceInquiriesAsProvider FreelanceInquiry[] @relation("FreelanceInquiriesAsProvider")
+  freelanceMessages        FreelanceMessage[]
 
   @@index([institutionId])
 }
@@ -445,10 +448,48 @@ model FreelanceService {
   priceUnit   String?  // "hour" | "project" | "month"
   skills      String[]
   location    String?
+  geoLat      Float?   // populated by the geocode helper when the user clicks "use my location"
+  geoLng      Float?
   isRemote    Boolean  @default(true)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
+  inquiries   FreelanceInquiry[]
 
   @@index([category])
   @@index([providerId])
+}
+
+// Inquiry / order workflow: client sends a brief on a service, provider can
+// accept (turns into an active order), decline, or chat via messages.
+model FreelanceInquiry {
+  id           String           @id @default(cuid())
+  serviceId    String
+  service      FreelanceService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       User             @relation("FreelanceInquiriesAsClient", fields: [clientId], references: [id], onDelete: Cascade)
+  providerId   String
+  provider     User             @relation("FreelanceInquiriesAsProvider", fields: [providerId], references: [id], onDelete: Cascade)
+  brief        String
+  budgetInr    Float?
+  deadlineAt   DateTime?
+  status       String           @default("pending") // "pending" | "accepted" | "declined" | "completed" | "cancelled"
+  providerNote String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  messages     FreelanceMessage[]
+
+  @@index([clientId, createdAt])
+  @@index([providerId, createdAt])
+}
+
+model FreelanceMessage {
+  id        String           @id @default(cuid())
+  inquiryId String
+  inquiry   FreelanceInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime         @default(now())
+
+  @@index([inquiryId, createdAt])
 }
