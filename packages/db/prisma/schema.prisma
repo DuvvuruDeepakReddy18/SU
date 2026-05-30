@@ -360,6 +360,7 @@ model InterviewBooking {
   notes       String?
   panelNotes  String?
   result      String?  // "L4_VERIFIED" | "FEEDBACK_ONLY"
+  meetingUrl  String?  // auto-generated Jitsi room URL
   createdAt   DateTime @default(now())
 
   @@index([userId, scheduledAt])

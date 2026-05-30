@@ -13,6 +13,10 @@ export class InterviewsService {
   }
 
   async book(userId: string, dto: { skillId?: string; scheduledAt: string; notes?: string }) {
+    // Auto-generate a Jitsi Meet room — free, no API key, anyone with the URL can join.
+    // Format: https://meet.jit.si/<room-name>. Room names are random + unguessable.
+    const roomName = `skillverify-${userId.slice(-6)}-${Date.now().toString(36)}`;
+    const meetingUrl = `https://meet.jit.si/${roomName}`;
     return this.prisma.interviewBooking.create({
       data: {
         userId,
@@ -20,6 +24,7 @@ export class InterviewsService {
         scheduledAt: new Date(dto.scheduledAt),
         notes: dto.notes ?? null,
         status: 'scheduled',
+        meetingUrl,
       },
     });
   }

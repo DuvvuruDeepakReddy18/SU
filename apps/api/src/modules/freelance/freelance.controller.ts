@@ -19,13 +19,25 @@ export class FreelanceController {
 
   @Public()
   @Get('services')
-  list(@Query('category') category?: string, @Query('q') q?: string) {
-    return this.svc.list(category, q);
+  list(
+    @Query('category') category?: string,
+    @Query('q') q?: string,
+    @Query('sort') sort?: 'recent' | 'price_asc' | 'price_desc',
+  ) {
+    return this.svc.list(category, q, sort);
   }
 
+  // IMPORTANT: '/services/mine' must be declared BEFORE '/services/:id' so
+  // the static path matches before the param catches it.
   @Get('services/mine')
   mine(@CurrentUser() u: JwtPayload) {
     return this.svc.mine(u.sub);
+  }
+
+  @Public()
+  @Get('services/:id')
+  getOne(@Param('id') id: string) {
+    return this.svc.getById(id);
   }
 
   @Post('services')

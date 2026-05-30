@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
@@ -9,7 +9,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { Lightbulb, BookOpen, MessageSquare, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
+import {
+  Lightbulb,
+  BookOpen,
+  MessageSquare,
+  Loader2,
+  Sparkles,
+  AlertTriangle,
+  Sun,
+  Moon,
+  Save,
+  Terminal as TerminalIcon,
+} from 'lucide-react';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
@@ -290,15 +301,122 @@ export default function ProblemPage({ params }: { params: { slug: string } }) {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <EditorPane
+        lang={lang}
+        setLang={setLang}
+        code={code}
+        setCode={setCode}
+        starter={problem.starterCode?.[lang] ?? ''}
+        slug={params.slug}
+        onSubmit={() => submit.mutate()}
+        submitting={submit.isPending}
+        sub={sub}
+        canSubmit={!!token}
+      />
+    </div>
+  );
+}
+
+// ---------- subcomponents ----------
+
+function EditorPane({
+  lang,
+  setLang,
+  code,
+  setCode,
+  starter,
+  slug,
+  onSubmit,
+  submitting,
+  sub,
+  canSubmit,
+}: {
+  lang: (typeof LANGS)[number]['value'];
+  setLang: (l: (typeof LANGS)[number]['value']) => void;
+  code: string;
+  setCode: (s: string) => void;
+  starter: string;
+  slug: string;
+  onSubmit: () => void;
+  submitting: boolean;
+  sub: Submission | undefined;
+  canSubmit: boolean;
+}) {
+  const [theme, setTheme] = useState<'vs-dark' | 'vs-light'>('vs-dark');
+  const [showTerminal, setShowTerminal] = useState(true);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-save to localStorage per slug+lang, debounced 600ms.
+  const storageKey = `sv:draft:${slug}:${lang}`;
+
+  // Restore draft when slug/lang changes.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem(storageKey);
+    if (stored) setCode(stored);
+    else setCode('');
+  }, [slug, lang, storageKey, setCode]);
+
+  // Debounced save on code change.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !code) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      localStorage.setItem(storageKey, code);
+      setSavedAt(Date.now());
+    }, 600);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [code, storageKey]);
+
+  const effectiveCode = code || starter;
+
+  // Determine what to show in the terminal panel.
+  const terminalLines: { type: 'info' | 'stdout' | 'stderr' | 'verdict'; text: string }[] = [];
+  if (sub) {
+    terminalLines.push({
+      type: 'verdict',
+      text: `verdict: ${sub.verdict}${
+        sub.testsTotal != null ? ` (${sub.testsPassed ?? 0}/${sub.testsTotal} tests)` : ''
+      }${sub.runtimeMs != null ? ` · ${sub.runtimeMs} ms` : ''}`,
+    });
+    if (sub.failedTest) {
+      terminalLines.push({ type: 'info', text: `--- failed test ---` });
+      terminalLines.push({ type: 'info', text: `input: ${sub.failedTest.input}` });
+      terminalLines.push({ type: 'info', text: `expected: ${sub.failedTest.expectedOutput}` });
+      terminalLines.push({
+        type: 'stdout',
+        text: `your stdout: ${sub.failedTest.gotStdout || '(empty)'}`,
+      });
+      if (sub.failedTest.stderr) {
+        terminalLines.push({ type: 'stderr', text: `stderr: ${sub.failedTest.stderr}` });
+      }
+      if (sub.failedTest.compileOutput) {
+        terminalLines.push({
+          type: 'stderr',
+          text: `compile: ${sub.failedTest.compileOutput}`,
+        });
+      }
+    } else if (sub.verdict === 'AC') {
+      terminalLines.push({ type: 'info', text: 'All tests passed ✓' });
+    }
+  } else {
+    terminalLines.push({
+      type: 'info',
+      text: 'Hit "Run & submit" — output, errors, and test diffs will land here.',
+    });
+  }
+
+  return (
+    <Card className="overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2 py-3">
+        <div className="flex items-center gap-2">
           <select
-            className="rounded border bg-background px-2 py-1 text-sm"
+            className="rounded border bg-background px-2 py-1 text-xs"
             value={lang}
-            onChange={(e) => {
-              setLang(e.target.value as typeof lang);
-              setCode('');
-            }}
+            onChange={(e) => setLang(e.target.value as typeof lang)}
           >
             {LANGS.map((l) => (
               <option key={l.value} value={l.value}>
@@ -306,26 +424,90 @@ export default function ProblemPage({ params }: { params: { slug: string } }) {
               </option>
             ))}
           </select>
-          <Button onClick={() => submit.mutate()} disabled={submit.isPending || !token}>
-            {submit.isPending ? 'Submitting…' : 'Run & submit'}
-          </Button>
-        </CardHeader>
-        <div className="flex-1">
+          <button
+            onClick={() => setTheme(theme === 'vs-dark' ? 'vs-light' : 'vs-dark')}
+            className="inline-flex items-center gap-1 rounded border px-2 py-1 text-[10px] hover:bg-secondary"
+            title="Toggle editor theme"
+          >
+            {theme === 'vs-dark' ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
+            {theme === 'vs-dark' ? 'Dark' : 'Light'}
+          </button>
+          <button
+            onClick={() => setShowTerminal((s) => !s)}
+            className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[10px] hover:bg-secondary ${
+              showTerminal ? 'bg-secondary' : ''
+            }`}
+            title="Toggle terminal panel"
+          >
+            <TerminalIcon className="h-3 w-3" /> Terminal
+          </button>
+          {savedAt && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Save className="h-3 w-3" /> saved
+            </span>
+          )}
+        </div>
+        <Button onClick={onSubmit} disabled={submitting || !canSubmit} size="sm">
+          {submitting ? 'Submitting…' : 'Run & submit'}
+        </Button>
+      </CardHeader>
+      <div
+        className={showTerminal ? 'flex-1 min-h-0 grid grid-rows-[1fr_180px]' : 'flex-1 min-h-0'}
+      >
+        <div className="min-h-0">
           <MonacoEditor
             height="100%"
             language={LANGS.find((l) => l.value === lang)?.monaco}
-            theme="vs-dark"
-            value={code || problem.starterCode?.[lang] || ''}
+            theme={theme}
+            value={effectiveCode}
             onChange={(v) => setCode(v ?? '')}
-            options={{ minimap: { enabled: false }, fontSize: 14 }}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              automaticLayout: true,
+              tabSize: 2,
+              wordWrap: 'on',
+              scrollBeyondLastLine: false,
+              suggestOnTriggerCharacters: true,
+              quickSuggestions: { other: true, comments: false, strings: false },
+            }}
           />
         </div>
-      </Card>
-    </div>
+        {showTerminal && (
+          <div
+            className={`overflow-auto border-t font-mono text-[11px] leading-relaxed p-3 ${
+              theme === 'vs-dark' ? 'bg-[#1e1e1e] text-zinc-300' : 'bg-white text-zinc-700'
+            }`}
+          >
+            {terminalLines.map((l, i) => (
+              <div
+                key={i}
+                className={
+                  l.type === 'verdict'
+                    ? sub?.verdict === 'AC'
+                      ? 'text-emerald-400'
+                      : 'text-amber-400'
+                    : l.type === 'stderr'
+                      ? 'text-rose-400'
+                      : l.type === 'stdout'
+                        ? theme === 'vs-dark'
+                          ? 'text-zinc-100'
+                          : 'text-zinc-900'
+                        : theme === 'vs-dark'
+                          ? 'text-zinc-500'
+                          : 'text-zinc-500'
+                }
+              >
+                <span className="text-zinc-600 select-none mr-2">›</span>
+                {l.text}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
-
-// ---------- subcomponents ----------
 
 function SubmissionResult({ sub }: { sub: Submission }) {
   const tone =

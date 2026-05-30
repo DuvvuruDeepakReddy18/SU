@@ -5,7 +5,13 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 export class FreelanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(category?: string, q?: string) {
+  list(category?: string, q?: string, sort: 'recent' | 'price_asc' | 'price_desc' = 'recent') {
+    const orderBy: Record<string, 'asc' | 'desc'> =
+      sort === 'price_asc'
+        ? { priceFrom: 'asc' }
+        : sort === 'price_desc'
+          ? { priceFrom: 'desc' }
+          : { createdAt: 'desc' };
     return this.prisma.freelanceService.findMany({
       where: {
         active: true,
@@ -19,7 +25,7 @@ export class FreelanceService {
             }
           : {}),
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       include: {
         provider: {
           include: {
@@ -28,6 +34,38 @@ export class FreelanceService {
         },
       },
     });
+  }
+
+  async getById(id: string) {
+    const svc = await this.prisma.freelanceService.findUnique({
+      where: { id },
+      include: {
+        provider: {
+          include: {
+            studentProfile: {
+              select: {
+                fullName: true,
+                avatarUrl: true,
+                sharableSlug: true,
+                headline: true,
+                bio: true,
+                location: true,
+                githubUrl: true,
+                linkedinUrl: true,
+                portfolioUrl: true,
+              },
+            },
+            institution: { select: { name: true } },
+            userSkills: {
+              include: { skill: true },
+              where: { highestVerificationLayer: { not: 'L0_UNVERIFIED' } },
+              take: 8,
+            },
+          },
+        },
+      },
+    });
+    return svc;
   }
 
   create(
