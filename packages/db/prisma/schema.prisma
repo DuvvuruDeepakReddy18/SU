@@ -57,6 +57,7 @@ model User {
   communityPosts        CommunityPost[]
   notifications         Notification[]
   votes                 CommunityVote[]
+  communityComments     CommunityComment[]
   interviewBookings     InterviewBooking[]
   postedDrives          PlacementDrive[] @relation("PostedDrives")
   placementApplications PlacementApplication[]
@@ -98,6 +99,13 @@ model StudentProfile {
   leetcodeUrl    String?
   codechefUrl    String?
   portfolioUrl   String?
+  // Institutional verification artefact (College ID card upload).
+  collegeIdUrl       String?
+  collegeIdUploadedAt DateTime?
+  collegeIdVerifiedAt DateTime?
+  // User-defined "custom" links beyond the built-in social ones.
+  // Shape: [{ label: string, url: string, icon?: string }]
+  customLinks    Json?
   isPublic       Boolean @default(true)
   updatedAt      DateTime @updatedAt
 }
@@ -257,31 +265,48 @@ model Submission {
 }
 
 model CommunityPost {
-  id          String          @id @default(cuid())
+  id          String             @id @default(cuid())
   authorId    String
-  author      User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  isAnonymous Boolean         @default(false)
+  author      User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isAnonymous Boolean            @default(false)
   body        String
   tags        String[]
-  visibility  String          @default("public") // "public" | "college_only"
-  upvotes     Int             @default(0)
-  downvotes   Int             @default(0)
-  createdAt   DateTime        @default(now())
+  visibility  String             @default("public") // "public" | "college_only"
+  upvotes     Int                @default(0)        // kept for back-compat; now "likes"
+  downvotes   Int                @default(0)        // unused — kept to avoid breaking changes
+  commentsCount Int              @default(0)
+  createdAt   DateTime           @default(now())
   votes       CommunityVote[]
+  comments    CommunityComment[]
 
   @@index([createdAt])
 }
 
+// Renamed conceptually to "like" but model kept as CommunityVote for back-compat.
+// value is now always 1 (we removed downvotes from the UI).
 model CommunityVote {
   id        String        @id @default(cuid())
   postId    String
   post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  value     Int           // -1 | 1
+  value     Int           // 1 (like) — old data may have -1, ignored by new UI
   createdAt DateTime      @default(now())
 
   @@unique([postId, userId])
+}
+
+model CommunityComment {
+  id          String        @id @default(cuid())
+  postId      String
+  post        CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isAnonymous Boolean       @default(false)
+  body        String
+  createdAt   DateTime      @default(now())
+
+  @@index([postId, createdAt])
 }
 
 model Notification {

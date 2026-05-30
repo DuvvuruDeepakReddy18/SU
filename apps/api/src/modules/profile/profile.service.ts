@@ -38,6 +38,17 @@ export class ProfileService {
     return uploaded;
   }
 
+  async uploadCollegeId(userId: string, file: Express.Multer.File) {
+    const ok = file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf';
+    if (!ok) throw new Error('College ID must be an image or PDF');
+    const uploaded = await this.storage.upload(`college-ids/${userId}`, file);
+    await this.prisma.studentProfile.update({
+      where: { userId },
+      data: { collegeIdUrl: uploaded.url, collegeIdUploadedAt: new Date() },
+    });
+    return uploaded;
+  }
+
   async uploadResume(userId: string, file: Express.Multer.File) {
     if (file.mimetype !== 'application/pdf') {
       throw new Error('Resume must be a PDF');

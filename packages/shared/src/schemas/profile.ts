@@ -20,6 +20,16 @@ export const UpdateProfileSchema = z.object({
   leetcodeUrl: urlOrEmpty,
   codechefUrl: urlOrEmpty,
   portfolioUrl: urlOrEmpty,
+  customLinks: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(60),
+        url: z.string().url(),
+        icon: z.string().max(40).optional(),
+      }),
+    )
+    .max(20)
+    .optional(),
   isPublic: z.boolean().optional(),
 });
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;

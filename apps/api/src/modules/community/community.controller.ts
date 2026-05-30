@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   DefaultValuePipe,
@@ -11,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { CommunityService } from './community.service';
-import { CommunityPostCreateDto, CommunityVoteDto } from './dto';
+import { CommunityPostCreateDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '@skillverify/shared';
 
@@ -33,17 +34,40 @@ export class CommunityController {
     return this.svc.create(u.sub, dto);
   }
 
-  @Post(':id/vote')
-  vote(
-    @CurrentUser() u: JwtPayload,
-    @Param('id') id: string,
-    @Body(ZodValidationPipe) dto: CommunityVoteDto,
-  ) {
-    return this.svc.vote(u.sub, id, dto);
+  @Post(':id/like')
+  like(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
+    return this.svc.toggleLike(u.sub, id);
   }
 
   @Delete(':id')
   remove(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
     return this.svc.remove(u.sub, id);
+  }
+
+  // ---------- Comments ----------
+
+  @Get(':id/comments')
+  listComments(@Param('id') id: string) {
+    return this.svc.listComments(id);
+  }
+
+  @Post(':id/comments')
+  addComment(
+    @CurrentUser() u: JwtPayload,
+    @Param('id') id: string,
+    @Body() body: { body: string; isAnonymous?: boolean },
+  ) {
+    if (!body?.body || body.body.trim().length < 1) {
+      throw new BadRequestException('Comment body required');
+    }
+    if (body.body.length > 2000) {
+      throw new BadRequestException('Comment too long (max 2000 chars)');
+    }
+    return this.svc.addComment(u.sub, id, body.body.trim(), !!body.isAnonymous);
+  }
+
+  @Delete('comments/:commentId')
+  deleteComment(@CurrentUser() u: JwtPayload, @Param('commentId') commentId: string) {
+    return this.svc.deleteComment(u.sub, commentId);
   }
 }

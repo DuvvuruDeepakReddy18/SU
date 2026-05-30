@@ -36,6 +36,12 @@ export class ProfileController {
     return this.profile.uploadAvatar(u.sub, file);
   }
 
+  @Post('college-id')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  uploadCollegeId(@CurrentUser() u: JwtPayload, @UploadedFile() file: Express.Multer.File) {
+    return this.profile.uploadCollegeId(u.sub, file);
+  }
+
   @Post('resume')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   uploadResume(@CurrentUser() u: JwtPayload, @UploadedFile() file: Express.Multer.File) {

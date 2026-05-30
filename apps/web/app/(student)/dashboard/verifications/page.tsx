@@ -9,6 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { Upload, ShieldCheck } from 'lucide-react';
+
+type Profile = {
+  collegeIdUrl: string | null;
+  collegeIdUploadedAt: string | null;
+  collegeIdVerifiedAt: string | null;
+};
 
 type Summary = {
   skills: { id: string; highestVerificationLayer: string; skill: { name: string } }[];
@@ -33,6 +40,38 @@ export default function VerificationsPage() {
     queryKey: ['verifications.summary'],
     queryFn: () => api<Summary>('/verifications/me/summary', { token }),
   });
+
+  const { data: profile } = useQuery({
+    enabled: !!token,
+    queryKey: ['profile.me'],
+    queryFn: () => api<Profile>('/profile/me', { token }),
+  });
+
+  const { data: features } = useQuery({
+    queryKey: ['config'],
+    queryFn: () =>
+      api<{ storage: boolean; ai: boolean; github: boolean; google: boolean }>('/config'),
+  });
+  const storageEnabled = features?.storage ?? true;
+
+  async function onCollegeId(file: File) {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    const tid = toast.loading('Uploading College ID…');
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/profile/college-id`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) throw new Error((await res.text()).slice(0, 200));
+      toast.success('College ID uploaded — pending verification', { id: tid });
+      qc.invalidateQueries({ queryKey: ['profile.me'] });
+    } catch (e) {
+      toast.error((e as Error).message, { id: tid });
+    }
+  }
 
   const [cert, setCert] = useState({ issuer: '', courseName: '' });
   const [academic, setAcademic] = useState({ semester: 1, cgpa: 8 });
@@ -61,8 +100,64 @@ export default function VerificationsPage() {
     },
   });
 
+  const collegeIdState = profile?.collegeIdVerifiedAt
+    ? { label: 'Verified', variant: 'success' as const }
+    : profile?.collegeIdUrl
+      ? { label: 'Pending review', variant: 'warning' as const }
+      : { label: 'Not uploaded', variant: 'secondary' as const };
+
   return (
     <div className="space-y-6">
+      {/* College ID — institution-issued proof */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShieldCheck className="h-4 w-4 text-primary" /> College ID
+            <Badge variant={collegeIdState.variant} className="ml-2">
+              {collegeIdState.label}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Upload a clear scan of your College ID card (image or PDF). Required for institutional
+            verification.
+          </p>
+          {!storageEnabled && (
+            <div className="rounded border border-amber-300/40 bg-amber-50/40 p-3 text-xs dark:bg-amber-900/10">
+              File storage isn&apos;t configured on this deployment, so uploads are disabled. Once
+              your admin enables storage, you&apos;ll be able to upload your ID here.
+            </div>
+          )}
+          {storageEnabled && (
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && onCollegeId(e.target.files[0])}
+                />
+                <span className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm hover:bg-secondary">
+                  <Upload className="h-4 w-4" />
+                  {profile?.collegeIdUrl ? 'Replace file' : 'Upload College ID'}
+                </span>
+              </label>
+              {profile?.collegeIdUrl && (
+                <a
+                  href={profile.collegeIdUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-primary hover:underline"
+                >
+                  View current →
+                </a>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
