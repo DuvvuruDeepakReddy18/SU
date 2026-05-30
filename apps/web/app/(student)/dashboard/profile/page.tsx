@@ -387,10 +387,10 @@ export default function ProfilePage() {
     );
   }
 
-  // --- Review mode (resume uploaded — read-only summary) ---
+  // --- Review mode (resume uploaded — read-only summary + PDF preview) ---
   return (
-    <div className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-lg font-semibold">Your profile</h2>
           <p className="text-sm text-muted-foreground">
@@ -428,51 +428,76 @@ export default function ProfilePage() {
 
       {justParsed && !parsing && <ParsedSummary fields={justParsed} />}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" /> About
+      {/* Two-column layout: parsed details on the left, PDF preview pinned right.
+          Falls back to single column on mobile (lg breakpoint = 1024px). */}
+      <div className={profile.resumeUrl ? 'grid gap-6 lg:grid-cols-[1fr_440px]' : ''}>
+        <div className="space-y-6 min-w-0">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" /> About
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <ReadField label="Name" value={profile.fullName} />
+              <ReadField label="Headline" value={profile.headline} />
+              <ReadField label="Bio" value={profile.bio} multiline />
+              <div className="grid gap-3 md:grid-cols-2">
+                <ReadField label="Phone" value={profile.phone} />
+                <ReadField label="Location" value={profile.location} />
+                <ReadField label="CGPA" value={profile.cgpa?.toFixed(2) ?? null} />
+                <ReadField
+                  label="Graduation year"
+                  value={profile.graduationYear?.toString() ?? null}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Links</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2 md:grid-cols-2 text-sm">
+              <ReadLink icon={Linkedin} label="LinkedIn" url={profile.linkedinUrl} />
+              <ReadLink icon={Github} label="GitHub" url={profile.githubUrl} />
+              <ReadLink icon={Code2} label="LeetCode" url={profile.leetcodeUrl} />
+              <ReadLink icon={Trophy} label="CodeChef" url={profile.codechefUrl} />
+              <ReadLink icon={Globe} label="Portfolio" url={profile.portfolioUrl} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {profile.resumeUrl && <ResumePreview url={profile.resumeUrl} />}
+      </div>
+    </div>
+  );
+}
+
+function ResumePreview({ url }: { url: string }) {
+  return (
+    <div className="lg:sticky lg:top-4 self-start">
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between py-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" /> Resume preview
           </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <ReadField label="Name" value={profile.fullName} />
-          <ReadField label="Headline" value={profile.headline} />
-          <ReadField label="Bio" value={profile.bio} multiline />
-          <div className="grid gap-3 md:grid-cols-2">
-            <ReadField label="Phone" value={profile.phone} />
-            <ReadField label="Location" value={profile.location} />
-            <ReadField label="CGPA" value={profile.cgpa?.toFixed(2) ?? null} />
-            <ReadField label="Graduation year" value={profile.graduationYear?.toString() ?? null} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Links</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2 md:grid-cols-2 text-sm">
-          <ReadLink icon={Linkedin} label="LinkedIn" url={profile.linkedinUrl} />
-          <ReadLink icon={Github} label="GitHub" url={profile.githubUrl} />
-          <ReadLink icon={Code2} label="LeetCode" url={profile.leetcodeUrl} />
-          <ReadLink icon={Trophy} label="CodeChef" url={profile.codechefUrl} />
-          <ReadLink icon={Globe} label="Portfolio" url={profile.portfolioUrl} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Resume on file</CardTitle>
-        </CardHeader>
-        <CardContent>
           <a
-            href={profile.resumeUrl ?? '#'}
+            href={url}
             target="_blank"
             rel="noreferrer"
-            className="text-sm text-primary hover:underline"
+            className="text-xs text-primary hover:underline"
           >
-            View uploaded PDF →
+            Open in new tab →
           </a>
+        </CardHeader>
+        <CardContent className="p-0">
+          {/* Browsers render PDFs natively in <iframe>. #toolbar=0 hides the Chrome toolbar. */}
+          <iframe
+            src={`${url}#toolbar=0&navpanes=0`}
+            title="Resume preview"
+            className="w-full h-[640px] border-t bg-secondary"
+          />
         </CardContent>
       </Card>
     </div>
