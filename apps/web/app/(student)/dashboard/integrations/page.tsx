@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
-import { Github, Linkedin, Link2, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { useConfig } from '@/lib/use-config';
+import { Github, Linkedin, Link2, Plus, Trash2, ExternalLink, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Integration = {
@@ -29,6 +30,7 @@ export default function IntegrationsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const token = (session as any)?.accessToken as string | undefined;
   const qc = useQueryClient();
+  const config = useConfig();
 
   const { data } = useQuery({
     enabled: !!token,
@@ -48,6 +50,15 @@ export default function IntegrationsPage() {
     onSuccess: (res) => {
       if (res?.url) window.location.href = res.url;
     },
+  });
+
+  const connectDigiLocker = useMutation({
+    mutationFn: () =>
+      api<{ url: string }>('/integrations/digilocker/connect', { method: 'POST', token }),
+    onSuccess: (res) => {
+      if (res?.url) window.location.href = res.url;
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   const sync = useMutation({
@@ -151,6 +162,37 @@ export default function IntegrationsPage() {
             </CardContent>
           </Card>
         ))}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileCheck className="h-4 w-4" /> DigiLocker / NAD
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Imports your academic records and degree certificates directly from the Govt-of-India
+              DigiLocker registry — bypasses manual marksheet uploads.
+            </p>
+            {config.digiLocker ? (
+              <Button
+                onClick={() => connectDigiLocker.mutate()}
+                disabled={connectDigiLocker.isPending}
+              >
+                {connectDigiLocker.isPending ? 'Redirecting…' : 'Connect DigiLocker'}
+              </Button>
+            ) : (
+              <>
+                <Badge variant="secondary">Coming soon</Badge>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pending Govt-of-India API onboarding. When approved, your admin sets{' '}
+                  <code className="text-foreground">DIGILOCKER_CLIENT_ID</code> in env and this tile
+                  flips to a connect button.
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Custom links */}

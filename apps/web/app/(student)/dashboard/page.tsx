@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { serverApi } from '@/lib/server-api';
 import { VerificationPill } from '@/components/verification-pill';
+import { DashboardAvatarWrapper } from '@/components/dashboard-avatar-wrapper';
 import { ExternalLink, Sparkles, Code2, Trophy, Briefcase, Building2, Video } from 'lucide-react';
 
 type Profile = {
@@ -105,6 +106,9 @@ export default async function DashboardPage() {
           </Link>
         )}
       </header>
+
+      {/* 3D avatar w/ orbiting nav bubbles */}
+      <DashboardAvatarWrapper studentName={profile?.fullName} />
 
       {/* Hero row: points + level + portfolio link */}
       <div className="grid gap-4 lg:grid-cols-[1fr_350px]">

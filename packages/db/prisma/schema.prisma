@@ -145,6 +145,10 @@ model StudentProfile {
   // Shape: [{ label: string, url: string, icon?: string }]
   customLinks    Json?
   isPublic       Boolean @default(true)
+  // Public-portfolio customization. Controls the rendered theme and the
+  // order of sections on /u/[slug]. Defaults give the existing layout.
+  shareTheme        String   @default("default") // "default" | "midnight" | "minimal"
+  shareSectionsOrder String[] @default(["about", "skills", "projects", "certifications"])
   updatedAt      DateTime @updatedAt
 }
 

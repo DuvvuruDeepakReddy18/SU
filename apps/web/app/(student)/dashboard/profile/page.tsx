@@ -482,7 +482,7 @@ export default function ProfilePage() {
 
 function ResumePreview({ url }: { url: string }) {
   return (
-    <div className="lg:sticky lg:top-4 self-start">
+    <div className="lg:sticky lg:top-4 self-start space-y-2">
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between py-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -506,6 +506,20 @@ function ResumePreview({ url }: { url: string }) {
           />
         </CardContent>
       </Card>
+      <div className="flex flex-col gap-1">
+        <a
+          href="/dashboard/profile/resume-builder"
+          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          ✦ Build a fresh resume from a template →
+        </a>
+        <a
+          href="/dashboard/profile/share"
+          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          ✦ Customize your public portfolio →
+        </a>
+      </div>
     </div>
   );
 }

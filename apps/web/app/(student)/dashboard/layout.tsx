@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { Sidebar } from '@/components/sidebar';
 import { Topbar } from '@/components/topbar';
+import { ChatWidget } from '@/components/chat-widget';
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -15,6 +16,8 @@ export default async function StudentLayout({ children }: { children: React.Reac
         <Topbar />
         <main className="flex-1 px-6 py-8">{children}</main>
       </div>
+      {/* Floating SkillBot — visible on every dashboard page */}
+      <ChatWidget />
     </div>
   );
 }

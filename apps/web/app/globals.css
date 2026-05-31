@@ -55,3 +55,21 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* ---------- Resume builder print-to-PDF ---------- */
+/* When the user prints from /dashboard/profile/resume-builder, hide every
+ * chrome element and only show .resume-preview at full A4 size. */
+@media print {
+  body * { visibility: hidden !important; }
+  .resume-preview, .resume-preview * { visibility: visible !important; }
+  .resume-preview {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  @page { size: A4; margin: 0; }
+}

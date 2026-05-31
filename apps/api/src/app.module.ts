@@ -26,6 +26,7 @@ import { CompetitionsModule } from './modules/competitions/competitions.module';
 import { FreelanceModule } from './modules/freelance/freelance.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { AdminModule } from './modules/admin/admin.module';
     FreelanceModule,
     InstitutionsModule,
     AdminModule,
+    ChatModule,
   ],
   controllers: [HealthController],
 })

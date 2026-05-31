@@ -91,8 +91,20 @@ export const UpdateProfileSchema = z.object({
     .max(20)
     .optional(),
   isPublic: z.boolean().optional(),
+  // Public-portfolio customization
+  shareTheme: z.enum(['default', 'midnight', 'minimal']).optional(),
+  shareSectionsOrder: z
+    .array(z.enum(['about', 'skills', 'projects', 'certifications']))
+    .min(1)
+    .max(4)
+    .optional(),
 });
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
+
+export const SHARE_SECTIONS = ['about', 'skills', 'projects', 'certifications'] as const;
+export type ShareSection = (typeof SHARE_SECTIONS)[number];
+export const SHARE_THEMES = ['default', 'midnight', 'minimal'] as const;
+export type ShareTheme = (typeof SHARE_THEMES)[number];
 
 // ---------- Resume parse schema ----------
 // Designed to be FORGIVING. Free models often return slightly off-shape data
