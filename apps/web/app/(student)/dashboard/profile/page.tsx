@@ -16,12 +16,14 @@ import {
   Globe,
   CheckCircle2,
   Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
+import { PROFILE_LINK_HOSTS } from '@skillverify/shared';
 
 type Profile = {
   fullName: string;
@@ -319,6 +321,7 @@ export default function ProfilePage() {
               value={form.linkedinUrl}
               onChange={(v) => setForm({ ...form, linkedinUrl: v })}
               placeholder="https://linkedin.com/in/…"
+              allowedHosts={[...PROFILE_LINK_HOSTS.linkedin]}
             />
             <LinkRow
               icon={Github}
@@ -326,6 +329,7 @@ export default function ProfilePage() {
               value={form.githubUrl}
               onChange={(v) => setForm({ ...form, githubUrl: v })}
               placeholder="https://github.com/…"
+              allowedHosts={[...PROFILE_LINK_HOSTS.github]}
             />
             <LinkRow
               icon={Code2}
@@ -333,6 +337,7 @@ export default function ProfilePage() {
               value={form.leetcodeUrl}
               onChange={(v) => setForm({ ...form, leetcodeUrl: v })}
               placeholder="https://leetcode.com/…"
+              allowedHosts={[...PROFILE_LINK_HOSTS.leetcode]}
             />
             <LinkRow
               icon={Trophy}
@@ -340,6 +345,7 @@ export default function ProfilePage() {
               value={form.codechefUrl}
               onChange={(v) => setForm({ ...form, codechefUrl: v })}
               placeholder="https://codechef.com/users/…"
+              allowedHosts={[...PROFILE_LINK_HOSTS.codechef]}
             />
             <LinkRow
               icon={Globe}
@@ -721,23 +727,74 @@ function LinkRow({
   value,
   onChange,
   placeholder,
+  allowedHosts,
 }: {
   icon: typeof Github;
   label: string;
   value?: string | null;
   onChange: (v: string) => void;
   placeholder: string;
+  // When provided, the input is validated to be a URL whose hostname matches
+  // one of these suffixes (e.g. ["github.com"]). Empty hosts list (or undef)
+  // means any http(s) URL is accepted.
+  allowedHosts?: string[];
 }) {
+  // Local error state for inline feedback (the backend re-validates).
+  const [error, setError] = useState<string | null>(null);
+
+  function validate(v: string): string | null {
+    if (!v) return null;
+    try {
+      const u = new URL(v);
+      if (!/^https?:$/.test(u.protocol)) return 'Must be a valid http(s) URL';
+      if (allowedHosts && allowedHosts.length > 0) {
+        const host = u.hostname.toLowerCase();
+        const ok = allowedHosts.some((h) => host === h || host.endsWith(`.${h}`));
+        if (!ok) return `This doesn't look like a ${label} URL`;
+      }
+      return null;
+    } catch {
+      return 'Invalid URL';
+    }
+  }
+
+  function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
+    let v = e.target.value.trim();
+    if (v && !/^https?:\/\//i.test(v)) {
+      v = `https://${v}`;
+      onChange(v);
+    }
+    setError(validate(v));
+  }
+
+  const isValidWithHref = value && !error;
+
   return (
     <div>
       <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Icon className="h-3.5 w-3.5" /> {label}
+        {isValidWithHref && (
+          <a
+            href={value}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto text-primary hover:underline inline-flex items-center gap-0.5"
+          >
+            Open <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
       </div>
       <Input
         value={value ?? ''}
         placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          if (error) setError(null);
+        }}
+        onBlur={handleBlur}
+        className={error ? 'border-destructive' : undefined}
       />
+      {error && <div className="mt-1 text-[10px] text-destructive">{error}</div>}
     </div>
   );
 }

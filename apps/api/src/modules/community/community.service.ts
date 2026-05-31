@@ -14,15 +14,23 @@ export class CommunityService {
     institutionId: string | null;
     page: number;
     pageSize: number;
+    // "all" (default) = public posts + my-college restricted posts
+    // "mine" = only posts authored by members of my own institution
+    scope?: 'all' | 'mine';
   }) {
-    const where = {
-      OR: [
-        { visibility: 'public' },
-        ...(opts.institutionId
-          ? [{ visibility: 'college_only', author: { institutionId: opts.institutionId } }]
-          : []),
-      ],
-    };
+    let where: Record<string, unknown>;
+    if (opts.scope === 'mine' && opts.institutionId) {
+      where = { author: { institutionId: opts.institutionId } };
+    } else {
+      where = {
+        OR: [
+          { visibility: 'public' },
+          ...(opts.institutionId
+            ? [{ visibility: 'college_only', author: { institutionId: opts.institutionId } }]
+            : []),
+        ],
+      };
+    }
     const [items, total, myLikes] = await Promise.all([
       this.prisma.communityPost.findMany({
         where,

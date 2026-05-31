@@ -31,6 +31,21 @@ export class PracticeController {
     return this.svc.getProblem(slug);
   }
 
+  /**
+   * Per-problem leaderboard. `scope=global` (default) or `scope=institute`
+   * (requires the caller to be authenticated so we can read their institutionId).
+   */
+  @Public()
+  @Get('problems/:slug/leaderboard')
+  problemLeaderboard(
+    @Param('slug') slug: string,
+    @Query('scope') scope: 'global' | 'institute' | undefined,
+    @Query('institutionId') institutionId: string | undefined,
+  ) {
+    const instId = scope === 'institute' ? (institutionId ?? null) : null;
+    return this.svc.problemLeaderboard(slug, instId);
+  }
+
   @Post('submissions')
   submit(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: SubmissionCreateDto) {
     return this.svc.submit(u.sub, dto);

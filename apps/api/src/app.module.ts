@@ -24,6 +24,8 @@ import { InterviewsModule } from './modules/interviews/interviews.module';
 import { PlacementsModule } from './modules/placements/placements.module';
 import { CompetitionsModule } from './modules/competitions/competitions.module';
 import { FreelanceModule } from './modules/freelance/freelance.module';
+import { InstitutionsModule } from './modules/institutions/institutions.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -49,6 +51,8 @@ import { FreelanceModule } from './modules/freelance/freelance.module';
     PlacementsModule,
     CompetitionsModule,
     FreelanceModule,
+    InstitutionsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
 })

@@ -3,6 +3,7 @@ import type { ResumeParseResult } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { StorageService } from '../../infra/storage/storage.service';
 import { ResumeParser } from './resume-parser';
+import { CollegeIdService } from '../verifications/college-id.service';
 import type { UpdateProfileDto } from './dto';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class ProfileService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly parser: ResumeParser,
+    private readonly collegeId: CollegeIdService,
   ) {}
 
   async getMine(userId: string) {
@@ -44,8 +46,18 @@ export class ProfileService {
     const uploaded = await this.storage.upload(`college-ids/${userId}`, file);
     await this.prisma.studentProfile.update({
       where: { userId },
-      data: { collegeIdUrl: uploaded.url, collegeIdUploadedAt: new Date() },
+      data: {
+        collegeIdUrl: uploaded.url,
+        collegeIdUploadedAt: new Date(),
+        // Re-uploading resets the verification state — the AI screen + admin
+        // queue picks it up again.
+        collegeIdStatus: 'pending_review',
+        collegeIdVerifiedAt: null,
+        collegeIdRejectionReason: null,
+      },
     });
+    // Fire AI rescreen if available.
+    void this.collegeId.screen(userId);
     return uploaded;
   }
 

@@ -224,6 +224,71 @@ export class PracticeService {
     });
   }
 
+  /**
+   * Per-problem leaderboard: best AC submission per user, ranked by runtimeMs.
+   * Scope is either "global" or restricted to a specific institution.
+   */
+  async problemLeaderboard(slug: string, institutionId: string | null, limit = 10) {
+    const problem = await this.prisma.problem.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!problem) throw new NotFoundException('Problem not found');
+
+    // 1. Best AC submission per user for this problem.
+    const subs = await this.prisma.submission.findMany({
+      where: {
+        problemId: problem.id,
+        verdict: 'AC',
+        runtimeMs: { not: null },
+        ...(institutionId ? { user: { institutionId } } : {}),
+      },
+      orderBy: [{ runtimeMs: 'asc' }, { createdAt: 'asc' }],
+      take: limit * 5, // overfetch to allow dedup-per-user
+      include: {
+        user: {
+          select: {
+            id: true,
+            studentProfile: {
+              select: { fullName: true, avatarUrl: true, sharableSlug: true },
+            },
+            institution: { select: { name: true, shortName: true } },
+          },
+        },
+      },
+    });
+
+    const seen = new Set<string>();
+    const result: {
+      rank: number;
+      userId: string;
+      runtimeMs: number;
+      memoryKb: number | null;
+      language: string;
+      fullName: string;
+      avatarUrl: string | null;
+      sharableSlug: string;
+      institutionName: string | null;
+    }[] = [];
+    for (const s of subs) {
+      if (seen.has(s.userId)) continue;
+      seen.add(s.userId);
+      result.push({
+        rank: result.length + 1,
+        userId: s.userId,
+        runtimeMs: s.runtimeMs ?? 0,
+        memoryKb: s.memoryKb,
+        language: s.language,
+        fullName: s.user.studentProfile?.fullName ?? 'Anonymous',
+        avatarUrl: s.user.studentProfile?.avatarUrl ?? null,
+        sharableSlug: s.user.studentProfile?.sharableSlug ?? '',
+        institutionName: s.user.institution?.shortName ?? s.user.institution?.name ?? null,
+      });
+      if (result.length >= limit) break;
+    }
+    return { scope: institutionId ? 'institute' : 'global', items: result };
+  }
+
   // --- AI helpers usable from the problem page (no submission required) ---
 
   async problemHint(slug: string) {

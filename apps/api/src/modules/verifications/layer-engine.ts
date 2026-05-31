@@ -46,8 +46,11 @@ export class LayerEngine {
   }
 
   private async computeLayer(userId: string, skillId: string): Promise<VerificationLayer> {
+    // Only counts records that passed the OCR+anti-tamper check (or were
+    // manually approved by an admin). Free-text uploads that haven't been
+    // OCR'd/reviewed stay at L0 — that's the whole point of L1.
     const academicCount = await this.prisma.academicRecord.count({
-      where: { userId, verifiedAt: { not: null } },
+      where: { userId, verificationStatus: 'verified' },
     });
     if (academicCount === 0) return VerificationLayer.L0_UNVERIFIED;
 

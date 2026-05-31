@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { VerificationsModule } from '../verifications/verifications.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
       secret: process.env.JWT_SECRET ?? 'dev-only-secret-change-me',
       signOptions: { expiresIn: '15m' },
     }),
+    VerificationsModule,
   ],
   controllers: [AuthController],
   providers: [

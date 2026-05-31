@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 type Row = {
   rank: number;
@@ -13,30 +15,72 @@ type Row = {
   profile: { fullName: string; avatarUrl: string | null; sharableSlug: string } | null;
 };
 
+type Profile = {
+  user: { institutionId: string | null; institution: { name: string } | null };
+};
+
 export default function LeaderboardPage() {
-  const [scope, setScope] = useState<'global' | 'college'>('global');
+  const { data: session } = useSession();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const token = (session as any)?.accessToken as string | undefined;
+  const [scope, setScope] = useState<'global' | 'institute'>('global');
+
+  const { data: profile } = useQuery({
+    enabled: !!token,
+    queryKey: ['profile.me'],
+    queryFn: () => api<Profile>('/profile/me', { token }),
+  });
+  const institutionId = profile?.user?.institutionId ?? null;
+  const institutionName = profile?.user?.institution?.name ?? 'My institute';
+
+  const queryUrl =
+    scope === 'institute' && institutionId
+      ? `/leaderboard?scope=college&id=${institutionId}`
+      : '/leaderboard?scope=global';
 
   const { data } = useQuery({
-    queryKey: ['leaderboard', scope],
-    queryFn: () => api<{ scope: string; items: Row[] }>(`/leaderboard?scope=${scope}`),
+    queryKey: ['leaderboard', scope, institutionId],
+    queryFn: () => api<{ scope: string; items: Row[] }>(queryUrl),
+    enabled: scope === 'global' || !!institutionId,
   });
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        {(['global', 'college'] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setScope(s)}
-            className={`rounded-md border px-3 py-1 text-sm capitalize ${scope === s ? 'bg-primary text-primary-foreground' : ''}`}
-          >
-            {s}
-          </button>
-        ))}
+      <div>
+        <h1 className="text-2xl font-semibold">Leaderboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Points are earned per accepted submission. Top performers get recruiter visibility.
+        </p>
       </div>
+
+      <div className="inline-flex rounded-md border bg-secondary/30 p-1">
+        <button
+          onClick={() => setScope('global')}
+          className={cn(
+            'rounded px-3 py-1 text-sm transition',
+            scope === 'global' ? 'bg-background shadow-sm' : 'text-muted-foreground',
+          )}
+        >
+          Global
+        </button>
+        <button
+          onClick={() => setScope('institute')}
+          disabled={!institutionId}
+          className={cn(
+            'rounded px-3 py-1 text-sm transition disabled:opacity-50',
+            scope === 'institute' ? 'bg-background shadow-sm' : 'text-muted-foreground',
+          )}
+          title={institutionId ? '' : 'Set your institution first'}
+        >
+          {institutionName}
+        </button>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="capitalize">{scope} leaderboard</CardTitle>
+          <CardTitle>
+            {scope === 'global' ? 'Global leaderboard' : `${institutionName} leaderboard`}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <ul className="divide-y">
@@ -58,7 +102,7 @@ export default function LeaderboardPage() {
                 <span className="text-sm text-muted-foreground">{r.score} pts</span>
               </li>
             ))}
-            {data?.items.length === 0 && (
+            {(data?.items.length ?? 0) === 0 && (
               <li className="p-6 text-sm text-muted-foreground">
                 No rankings yet — solve a problem to appear.
               </li>

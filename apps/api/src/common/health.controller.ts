@@ -10,6 +10,8 @@ export class HealthController {
   }
 
   // Feature flags so the frontend can hide UI for disabled integrations.
+  // Driven entirely by env-var presence — set the relevant keys to flip a
+  // feature on. Keep this in sync with apps/web/lib/use-config.ts.
   @Public()
   @Get('config')
   config() {
@@ -18,6 +20,11 @@ export class HealthController {
       ai: !!process.env.OPENROUTER_API_KEY,
       github: !!process.env.GITHUB_CLIENT_ID,
       google: !!process.env.GOOGLE_CLIENT_ID,
+      // Paid features — off until you wire up real credentials.
+      razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
+      digiLocker: !!process.env.DIGILOCKER_CLIENT_ID,
+      // L4 expert screen is built but the interviewer panel module isn't.
+      expertScreen: process.env.EXPERT_SCREEN_ENABLED === 'true',
     };
   }
 }

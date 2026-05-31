@@ -17,6 +17,7 @@ export class VerificationsService {
   ) {}
 
   async addAcademic(userId: string, dto: AcademicRecordCreateDto) {
+    const isVerified = dto.verifiedVia !== 'manual';
     const record = await this.prisma.academicRecord.create({
       data: {
         userId,
@@ -25,15 +26,20 @@ export class VerificationsService {
         sgpa: dto.sgpa ?? null,
         docUrl: dto.docUrl ?? null,
         verifiedVia: dto.verifiedVia,
-        // For Phase 1, institution and manual uploads land verified.
-        // DigiLocker integration will gate this with a real verification call later.
-        verifiedAt: dto.verifiedVia === 'manual' ? null : new Date(),
+        // Institution and DigiLocker sources land verified; manual stays pending
+        // until the user backs it with an OCR'd semester marksheet.
+        verifiedAt: isVerified ? new Date() : null,
+        verificationStatus: isVerified ? 'verified' : 'pending',
       },
     });
-    await this.prisma.studentProfile.update({
-      where: { userId },
-      data: { cgpa: dto.cgpa },
-    });
+    // Only update the master CGPA if this record is itself verified — manual
+    // entries must not poison the displayed CGPA.
+    if (isVerified) {
+      await this.prisma.studentProfile.update({
+        where: { userId },
+        data: { cgpa: dto.cgpa, cgpaVerifiedAt: new Date() },
+      });
+    }
     await this.engine.recomputeAllForUser(userId);
     return record;
   }
@@ -113,6 +119,63 @@ export class VerificationsService {
     return {
       status: 'coming_soon',
       message: 'Expert screening (L4) launches in Phase 2. You can join the waitlist.',
+    };
+  }
+
+  /**
+   * Per-field verification snapshot. Drives the UNVERIFIED / VERIFIED chips
+   * on the dashboard, profile page, and public portfolio.
+   */
+  async myStatus(userId: string) {
+    const [profile, verifiedRecords, skills] = await Promise.all([
+      this.prisma.studentProfile.findUnique({
+        where: { userId },
+        select: {
+          collegeIdStatus: true,
+          collegeIdVerifiedAt: true,
+          cgpa: true,
+          cgpaVerifiedAt: true,
+        },
+      }),
+      this.prisma.academicRecord.count({
+        where: { userId, verificationStatus: 'verified' },
+      }),
+      this.prisma.userSkill.findMany({
+        where: { userId },
+        select: { highestVerificationLayer: true },
+      }),
+    ]);
+
+    const collegeId =
+      profile?.collegeIdStatus === 'verified' || !!profile?.collegeIdVerifiedAt
+        ? 'verified'
+        : profile?.collegeIdStatus === 'rejected'
+          ? 'rejected'
+          : profile?.collegeIdStatus === 'pending_review'
+            ? 'pending'
+            : 'unverified';
+
+    const cgpa = profile?.cgpaVerifiedAt ? 'verified' : 'unverified';
+    const skillsVerified = skills.filter(
+      (s) => s.highestVerificationLayer !== 'L0_UNVERIFIED',
+    ).length;
+
+    // Overall: verified only if college ID AND cgpa AND at least one skill verified
+    const overall =
+      collegeId === 'verified' && cgpa === 'verified' && skillsVerified > 0
+        ? 'verified'
+        : collegeId === 'verified' || cgpa === 'verified' || skillsVerified > 0
+          ? 'partial'
+          : 'unverified';
+
+    return {
+      overall,
+      fields: {
+        collegeId,
+        cgpa,
+        academicRecords: { verified: verifiedRecords },
+        skills: { verified: skillsVerified, total: skills.length },
+      },
     };
   }
 }

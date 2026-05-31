@@ -25,8 +25,15 @@ export class CommunityController {
     @CurrentUser() u: JwtPayload,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+    @Query('scope') scope: 'all' | 'mine' | undefined,
   ) {
-    return this.svc.list({ userId: u.sub, institutionId: u.institutionId ?? null, page, pageSize });
+    return this.svc.list({
+      userId: u.sub,
+      institutionId: u.institutionId ?? null,
+      page,
+      pageSize,
+      scope: scope === 'mine' ? 'mine' : 'all',
+    });
   }
 
   @Post()

@@ -3,13 +3,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { serverApi } from '@/lib/server-api';
+import { VerificationPill } from '@/components/verification-pill';
 import { ExternalLink, Sparkles, Code2, Trophy, Briefcase, Building2, Video } from 'lucide-react';
 
 type Profile = {
   fullName: string;
   sharableSlug: string;
   cgpa: number | null;
+  cgpaVerifiedAt: string | null;
   user: { institution: { name: string } | null };
+};
+
+type Status = {
+  overall: 'verified' | 'partial' | 'unverified';
+  fields: {
+    collegeId: 'verified' | 'pending' | 'rejected' | 'unverified';
+    cgpa: 'verified' | 'unverified';
+    academicRecords: { verified: number };
+    skills: { verified: number; total: number };
+  };
 };
 
 type Summary = {
@@ -32,10 +44,12 @@ function levelFromPoints(pts: number): string {
 export default async function DashboardPage() {
   let profile: Profile | null = null;
   let summary: Summary | null = null;
+  let status: Status | null = null;
   let subs: Sub[] = [];
   try {
     profile = await serverApi<Profile>('/profile/me');
     summary = await serverApi<Summary>('/verifications/me/summary');
+    status = await serverApi<Status>('/verifications/me/status');
     subs = await serverApi<Sub[]>('/practice/submissions');
   } catch {
     /* backend may be unreachable */
@@ -64,13 +78,32 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">
-          Welcome back{profile ? `, ${profile.fullName.split(' ')[0]}` : ''}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {profile?.user?.institution?.name ?? 'Build a verified profile recruiters trust.'}
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-3">
+            Welcome back{profile ? `, ${profile.fullName.split(' ')[0]}` : ''}
+            {status && (
+              <VerificationPill
+                state={status.overall}
+                label={
+                  status.overall === 'verified'
+                    ? 'VERIFIED PROFILE'
+                    : status.overall === 'partial'
+                      ? 'PARTIALLY VERIFIED'
+                      : 'UNVERIFIED PROFILE'
+                }
+              />
+            )}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {profile?.user?.institution?.name ?? 'Build a verified profile recruiters trust.'}
+          </p>
+        </div>
+        {status?.overall !== 'verified' && (
+          <Link href="/dashboard/verifications">
+            <Button size="sm">Complete verification</Button>
+          </Link>
+        )}
       </header>
 
       {/* Hero row: points + level + portfolio link */}
@@ -148,12 +181,23 @@ export default async function DashboardPage() {
       {/* Stat row */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
+          label="CGPA"
+          value={profile?.cgpa != null ? profile.cgpa.toFixed(2) : '—'}
+          pill={
+            profile?.cgpa != null ? (
+              <VerificationPill
+                state={profile.cgpaVerifiedAt ? 'verified' : 'unverified'}
+                size="xs"
+              />
+            ) : undefined
+          }
+        />
+        <StatCard
           label="Skills verified"
           value={`${layerCounts.L1_ACADEMIC + layerCounts.L2_CERTIFIED + layerCounts.L3_PROVEN + layerCounts.L4_EXPERT}/${totalSkills}`}
         />
         <StatCard label="Certifications" value={summary?.certs.length ?? 0} />
         <StatCard label="Academic records" value={summary?.academic.length ?? 0} />
-        <StatCard label="Projects" value={summary?.projects.length ?? 0} />
       </div>
 
       {/* Quick access tiles */}
@@ -202,12 +246,23 @@ export default async function DashboardPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
+function StatCard({
+  label,
+  value,
+  pill,
+}: {
+  label: string;
+  value: number | string;
+  pill?: React.ReactNode;
+}) {
   return (
     <Card>
       <CardContent className="p-5">
         <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-        <div className="mt-1 text-3xl font-semibold">{value}</div>
+        <div className="mt-1 flex items-center gap-2">
+          <div className="text-3xl font-semibold">{value}</div>
+          {pill}
+        </div>
       </CardContent>
     </Card>
   );

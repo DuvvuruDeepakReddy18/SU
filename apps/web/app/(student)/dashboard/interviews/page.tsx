@@ -9,7 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Calendar, Video, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { useConfig } from '@/lib/use-config';
+import {
+  Calendar,
+  Video,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  IndianRupee,
+} from 'lucide-react';
 
 type Booking = {
   id: string;
@@ -28,6 +36,7 @@ export default function InterviewsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const token = (session as any)?.accessToken as string | undefined;
   const qc = useQueryClient();
+  const config = useConfig();
   const [showPicker, setShowPicker] = useState(false);
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
@@ -85,11 +94,24 @@ export default function InterviewsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold">Verification Interviews</h1>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            Verification Interviews
+            {!config.razorpay && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                Free during beta
+              </span>
+            )}
+          </h1>
           <p className="text-sm text-muted-foreground">
             Book your L4 Expert Verification. Get certified Market Ready.
+            {config.razorpay && (
+              <span className="ml-1 inline-flex items-center gap-0.5 text-foreground font-medium">
+                <IndianRupee className="h-3 w-3" />
+                499 per interview
+              </span>
+            )}
           </p>
         </div>
         <Button onClick={() => setShowPicker(!showPicker)}>

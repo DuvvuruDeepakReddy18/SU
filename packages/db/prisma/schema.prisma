@@ -74,22 +74,52 @@ model User {
 model Institution {
   id            String  @id @default(cuid())
   name          String
-  domain        String  @unique
+  // Optional + unique-when-present: some institutions (small DU colleges, etc.)
+  // don't have their own email domain. Signup falls back to a chosen
+  // institution id from the picker instead of email-derived matching.
+  domain        String? @unique
+  shortName     String?  // "IIT-D", "SRCC", "IIM-A"
+  category      String?  // "engineering" | "management" | "law" | "science" | "commerce" | "arts" | "medical" | "other"
+  nirfRank      Int?
+  state         String?
+  city          String?
+  // Curated rows start verified=true. User-suggested rows from the signup
+  // picker land here as verified=false and surface in the admin queue.
+  verified      Boolean @default(true)
+  addedByUserId String?
   tier          String?
   licenseStatus String  @default("trial")
   users         User[]
   createdAt     DateTime @default(now())
+
+  @@index([category])
+  @@index([nirfRank])
+  @@index([name])
 }
 
 model StudentProfile {
   userId         String  @id
   user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName       String
+  // Legal name as it appears on the college ID. Used for verification
+  // matching; may differ from fullName (preferred name shown in UI).
+  governmentName String?
+  // E.164-format phone number captured at signup ("+91XXXXXXXXXX").
+  phoneNumber    String?
+  // Distinct from User.email (which is the login email — can be Gmail/etc).
+  // This is the @college.edu address used for institutional correspondence.
+  instituteEmail String?
+  // e.g. "B.Tech", "MBA", "BCA", "MBBS" — drives the # of semester tiles
+  // on the verification page.
+  courseProgram  String?
   headline       String?
   bio            String?
   avatarUrl      String?
   resumeUrl      String?
+  // Free-text CGPA — shown alongside an UNVERIFIED badge until backed by
+  // at least one verified AcademicRecord (see cgpaVerifiedAt).
   cgpa           Float?
+  cgpaVerifiedAt DateTime?
   graduationYear Int?
   sharableSlug   String  @unique
   phone          String?
@@ -103,9 +133,14 @@ model StudentProfile {
   codechefUrl    String?
   portfolioUrl   String?
   // Institutional verification artefact (College ID card upload).
-  collegeIdUrl       String?
-  collegeIdUploadedAt DateTime?
-  collegeIdVerifiedAt DateTime?
+  collegeIdUrl              String?
+  collegeIdUploadedAt       DateTime?
+  collegeIdVerifiedAt       DateTime?
+  // "pending_review" | "verified" | "rejected" | null (no ID uploaded yet)
+  collegeIdStatus           String?
+  collegeIdRejectionReason  String?
+  // Snapshot of what the OCR pre-screen extracted, for the admin queue.
+  collegeIdOcrExtracted     Json?
   // User-defined "custom" links beyond the built-in social ones.
   // Shape: [{ label: string, url: string, icon?: string }]
   customLinks    Json?
@@ -196,11 +231,25 @@ model AcademicRecord {
   cgpa        Float
   sgpa        Float?
   docUrl      String?
-  verifiedVia String    // "digilocker" | "institution" | "manual"
+  // OCR-extracted from the uploaded marksheet. Used to display "verified by
+  // <name>" and to support audits.
+  extractedName        String?
+  extractedInstitution String?
+  examDate             DateTime?
+  // SHA-256 of the uploaded file — used to reject exact-duplicate marksheets
+  // (same student reuploading; different students submitting the same image).
+  fileSha256           String?
+  // "pending" | "verified" | "rejected"
+  verificationStatus   String   @default("pending")
+  // Raw OCR output for the admin queue / audit log.
+  ocrExtracted         Json?
+  rejectionReason      String?
+  verifiedVia String    // "digilocker" | "institution" | "manual" | "ai_ocr"
   verifiedAt  DateTime?
   createdAt   DateTime  @default(now())
 
   @@index([userId])
+  @@index([fileSha256])
 }
 
 model ExternalIntegration {

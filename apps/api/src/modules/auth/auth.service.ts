@@ -7,8 +7,10 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import type { User, UserRole } from '@prisma/client';
-import type { JwtPayload } from '@skillverify/shared';
+import type { JwtPayload, SignupInput } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { StorageService } from '../../infra/storage/storage.service';
+import { CollegeIdService } from '../verifications/college-id.service';
 import type { OAuthSyncDto } from './dto';
 
 @Injectable()
@@ -16,21 +18,44 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly storage: StorageService,
+    private readonly collegeId: CollegeIdService,
   ) {}
 
-  async signup(input: { email: string; password: string; fullName: string }) {
+  async signup(input: SignupInput) {
+    // Email uniqueness on the login email.
     const existing = await this.prisma.user.findUnique({ where: { email: input.email } });
     if (existing) throw new ConflictException('Email already registered');
 
-    const institution = await this.resolveInstitution(input.email);
+    // Validate the institution actually exists. The picker should always
+    // return a real id, but we re-check server-side.
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: input.institutionId },
+    });
     if (!institution) {
-      throw new BadRequestException(
-        'Sign-up is restricted to verified institution email domains. Contact your institution.',
-      );
+      throw new BadRequestException('Selected institution does not exist.');
     }
 
+    // If the institution has a domain on record, the institute email must
+    // match it. Otherwise we accept any email (user-added institutions or
+    // ones we haven't enriched with a domain yet).
+    if (institution.domain) {
+      const emailDomain = input.instituteEmail.split('@')[1]?.toLowerCase();
+      if (emailDomain !== institution.domain.toLowerCase()) {
+        throw new BadRequestException(
+          `Institute email must end with @${institution.domain} for ${institution.name}.`,
+        );
+      }
+    }
+
+    // The collegeIdFileKey must be a previously-uploaded temp object.
+    if (!input.collegeIdFileKey.startsWith('temp/college-ids/')) {
+      throw new BadRequestException('Invalid college-ID upload key.');
+    }
+    const collegeIdUrl = this.storage.publicUrlFor(input.collegeIdFileKey);
+
     const passwordHash = await bcrypt.hash(input.password, 10);
-    const slug = await this.generateSlug(input.fullName);
+    const slug = await this.generateSlug(input.governmentName);
 
     const user = await this.prisma.user.create({
       data: {
@@ -39,10 +64,28 @@ export class AuthService {
         role: 'STUDENT',
         institutionId: institution.id,
         studentProfile: {
-          create: { fullName: input.fullName, sharableSlug: slug, isPublic: true },
+          create: {
+            // fullName defaults to government name unless the student renames
+            // themselves later in profile settings (e.g. preferred name).
+            fullName: input.governmentName,
+            governmentName: input.governmentName,
+            phoneNumber: input.phoneNumber,
+            instituteEmail: input.instituteEmail,
+            courseProgram: input.courseProgram,
+            sharableSlug: slug,
+            isPublic: true,
+            collegeIdUrl,
+            collegeIdUploadedAt: new Date(),
+            collegeIdStatus: 'pending_review',
+          },
         },
       },
     });
+
+    // Fire-and-forget AI pre-screen. May flip status to 'verified' if the
+    // OCR cleanly matches name + institution and the image isn't edited.
+    void this.collegeId.screen(user.id);
+
     return this.issueTokens(user);
   }
 

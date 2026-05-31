@@ -1,4 +1,14 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpException,
+  HttpStatus,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { InterviewsService } from './interviews.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '@skillverify/shared';
@@ -24,5 +34,34 @@ export class InterviewsController {
   @Delete(':id')
   cancel(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
     return this.svc.cancel(u.sub, id);
+  }
+
+  /**
+   * Razorpay order-creation stub. Returns 503 until both RAZORPAY_KEY_ID and
+   * RAZORPAY_KEY_SECRET are set. When live, this should create a Razorpay
+   * order and return the client_secret for the frontend checkout flow.
+   *
+   * Phase 1 keeps interviews free; the UI hides the payment step entirely
+   * when the feature flag is off (see GET /config → razorpay).
+   */
+  @Post('payments/order')
+  createPaymentOrder(@CurrentUser() _u: JwtPayload) {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+          message: 'Razorpay is not configured. Booking remains free during beta.',
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+    // TODO: integrate Razorpay SDK here when credentials are available.
+    throw new HttpException(
+      {
+        statusCode: HttpStatus.NOT_IMPLEMENTED,
+        message: 'Razorpay integration coming in Phase 2.',
+      },
+      HttpStatus.NOT_IMPLEMENTED,
+    );
   }
 }

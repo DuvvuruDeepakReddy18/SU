@@ -2,6 +2,7 @@ import { PrismaClient, type CertificationTier } from '@prisma/client';
 import { SKILL_SEEDS } from './seed-data/skills';
 import { CERT_RULES } from './seed-data/cert-rules';
 import { PROBLEMS } from './seed-data/problems';
+import { INSTITUTION_SEEDS } from './seed-data/institutions';
 
 const prisma = new PrismaClient();
 
@@ -45,19 +46,45 @@ async function seedCertRules() {
 }
 
 async function seedInstitutions() {
-  console.warn('Seeding institutions...');
-  const institutions = [
-    { name: 'Indian Institute of Management Udaipur', domain: 'iimu.ac.in', tier: 'tier-1' },
-    { name: 'BITS Pilani', domain: 'pilani.bits-pilani.ac.in', tier: 'tier-1' },
-    { name: 'VIT Vellore', domain: 'vitstudent.ac.in', tier: 'tier-2' },
-  ];
-  for (const inst of institutions) {
-    await prisma.institution.upsert({
-      where: { domain: inst.domain },
-      update: { name: inst.name, tier: inst.tier },
-      create: inst,
-    });
+  console.warn(`Seeding ${INSTITUTION_SEEDS.length} institutions...`);
+  // Upsert by domain (where present) so the seed is idempotent against the
+  // existing 3-row stub. Rows without a domain are matched by name.
+  let updated = 0;
+  let created = 0;
+  for (const inst of INSTITUTION_SEEDS) {
+    const data = {
+      name: inst.name,
+      shortName: inst.shortName ?? null,
+      category: inst.category,
+      nirfRank: inst.nirfRank ?? null,
+      state: inst.state ?? null,
+      city: inst.city ?? null,
+      tier: inst.tier ?? null,
+      verified: true,
+    };
+    if (inst.domain) {
+      const existing = await prisma.institution.findUnique({ where: { domain: inst.domain } });
+      if (existing) {
+        await prisma.institution.update({ where: { domain: inst.domain }, data });
+        updated += 1;
+      } else {
+        await prisma.institution.create({ data: { ...data, domain: inst.domain } });
+        created += 1;
+      }
+    } else {
+      const existing = await prisma.institution.findFirst({
+        where: { name: inst.name, domain: null },
+      });
+      if (existing) {
+        await prisma.institution.update({ where: { id: existing.id }, data });
+        updated += 1;
+      } else {
+        await prisma.institution.create({ data });
+        created += 1;
+      }
+    }
   }
+  console.warn(`Institutions: ${created} created, ${updated} updated.`);
 }
 
 async function seedProblems() {

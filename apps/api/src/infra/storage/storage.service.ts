@@ -60,6 +60,14 @@ export class StorageService {
     });
   }
 
+  publicUrlFor(key: string): string {
+    return `${this.publicUrl}/${key}`;
+  }
+
+  isConfigured(): boolean {
+    return this.client !== null;
+  }
+
   async delete(key: string) {
     if (!this.client) return;
     try {

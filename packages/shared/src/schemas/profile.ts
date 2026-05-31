@@ -1,11 +1,70 @@
 import { z } from 'zod';
 
+/**
+ * Builds a URL refinement that restricts the URL's hostname to the given
+ * list of allowed domains (suffix match — e.g. "github.com" matches
+ * "www.github.com" or "gist.github.com").
+ *
+ * Returns a schema that:
+ *  - accepts null / undefined / empty string (field is optional)
+ *  - requires http(s):// prefix
+ *  - matches one of the allowed hosts
+ *  - has a friendly error message naming the expected service
+ */
+function urlForService(
+  serviceLabel: string,
+  allowedHosts: string[],
+): z.ZodEffects<z.ZodNullable<z.ZodOptional<z.ZodString>>> {
+  return z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .refine(
+      (v) => {
+        if (!v) return true;
+        try {
+          const url = new URL(v);
+          if (!/^https?:$/.test(url.protocol)) return false;
+          const host = url.hostname.toLowerCase();
+          return allowedHosts.some((h) => host === h || host.endsWith(`.${h}`));
+        } catch {
+          return false;
+        }
+      },
+      `This doesn't look like a ${serviceLabel} URL. Expected one of: ${allowedHosts.join(', ')}`,
+    );
+}
+
+// Generic URL field — must be http(s) but the hostname is unrestricted.
 const urlOrEmpty = z
   .string()
   .max(500)
   .nullable()
   .optional()
-  .refine((v) => !v || /^https?:\/\//i.test(v), 'Must start with http(s)://');
+  .refine((v) => {
+    if (!v) return true;
+    try {
+      const url = new URL(v);
+      return /^https?:$/.test(url.protocol);
+    } catch {
+      return false;
+    }
+  }, 'Must be a valid http(s) URL');
+
+export const PROFILE_LINK_HOSTS = {
+  linkedin: ['linkedin.com', 'lnkd.in'],
+  github: ['github.com'],
+  leetcode: ['leetcode.com'],
+  codechef: ['codechef.com'],
+  codeforces: ['codeforces.com'],
+  hackerrank: ['hackerrank.com'],
+  hackerearth: ['hackerearth.com'],
+  unstop: ['unstop.com'],
+  kaggle: ['kaggle.com'],
+  behance: ['behance.net'],
+  dribbble: ['dribbble.com'],
+} as const;
 
 export const UpdateProfileSchema = z.object({
   fullName: z.string().min(1).max(120).optional(),
@@ -15,10 +74,11 @@ export const UpdateProfileSchema = z.object({
   location: z.string().max(120).nullable().optional(),
   cgpa: z.number().min(0).max(10).nullable().optional(),
   graduationYear: z.number().int().min(2000).max(2100).nullable().optional(),
-  linkedinUrl: urlOrEmpty,
-  githubUrl: urlOrEmpty,
-  leetcodeUrl: urlOrEmpty,
-  codechefUrl: urlOrEmpty,
+  linkedinUrl: urlForService('LinkedIn', [...PROFILE_LINK_HOSTS.linkedin]),
+  githubUrl: urlForService('GitHub', [...PROFILE_LINK_HOSTS.github]),
+  leetcodeUrl: urlForService('LeetCode', [...PROFILE_LINK_HOSTS.leetcode]),
+  codechefUrl: urlForService('CodeChef', [...PROFILE_LINK_HOSTS.codechef]),
+  // Portfolio is the user's own site — accept any https URL.
   portfolioUrl: urlOrEmpty,
   customLinks: z
     .array(

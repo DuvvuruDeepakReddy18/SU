@@ -82,6 +82,74 @@ export class OpenRouterClient {
     );
   }
 
+  /**
+   * Vision variant: passes an image (base64 data URL) to a multimodal model.
+   * Same fallback semantics as chatJson — tries each model in order on rate
+   * limits / quota errors. Returns parsed JSON.
+   */
+  async visionJson(
+    models: string[],
+    system: string,
+    user: string,
+    imageDataUrl: string,
+    maxTokens = 1_500,
+  ): Promise<unknown> {
+    if (!this.client) throw new Error('OPENROUTER_API_KEY is not configured');
+    const tried: string[] = [];
+    let lastErr: unknown = null;
+
+    for (const model of models) {
+      tried.push(model);
+      try {
+        const res = await this.client.chat.completions.create({
+          model,
+          max_tokens: maxTokens,
+          temperature: 0.1,
+          messages: [
+            { role: 'system', content: system },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: user },
+                { type: 'image_url', image_url: { url: imageDataUrl } },
+              ],
+            },
+          ],
+        });
+        const content = res.choices[0]?.message?.content;
+        if (!content || (typeof content === 'string' && !content.trim())) {
+          this.log.warn(`Empty vision content from ${model}, trying next fallback`);
+          continue;
+        }
+        const text = typeof content === 'string' ? content : JSON.stringify(content);
+        return JSON.parse(this.extractJson(text));
+      } catch (e) {
+        lastErr = e;
+        const status = (e as { status?: number }).status;
+        const msg = (e as Error).message ?? '';
+        if (
+          status === 429 ||
+          status === 402 ||
+          status === 404 ||
+          msg.includes('rate-limit') ||
+          msg.includes('quota')
+        ) {
+          this.log.warn(
+            `${model} vision failed (${status}: ${msg.slice(0, 100)}), trying fallback`,
+          );
+          continue;
+        }
+        throw e;
+      }
+    }
+
+    throw new Error(
+      `All ${tried.length} OpenRouter vision models failed: ${tried.join(', ')}. Last error: ${
+        (lastErr as Error)?.message ?? 'unknown'
+      }`,
+    );
+  }
+
   private extractJson(s: string): string {
     const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenced) return fenced[1].trim();

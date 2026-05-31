@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { ProblemLeaderboard } from '@/components/problem-leaderboard';
 import {
   Lightbulb,
   BookOpen,
@@ -298,6 +299,8 @@ export default function ProblemPage({ params }: { params: { slug: string } }) {
           </div>
 
           {sub && <SubmissionResult sub={sub} />}
+
+          <ProblemLeaderboard slug={params.slug} />
         </CardContent>
       </Card>
 

@@ -46,11 +46,21 @@ export default function CommunityPage() {
 
   const [body, setBody] = useState('');
   const [anon, setAnon] = useState(false);
+  const [scope, setScope] = useState<'all' | 'mine'>('all');
+
+  // Used to label the "My institute" tab.
+  const { data: profile } = useQuery({
+    enabled: !!token,
+    queryKey: ['profile.me'],
+    queryFn: () =>
+      api<{ user: { institution: { name: string } | null } }>('/profile/me', { token }),
+  });
 
   const { data } = useQuery({
     enabled: !!token,
-    queryKey: ['community.posts'],
-    queryFn: () => api<{ items: Post[]; total: number }>('/community/posts', { token }),
+    queryKey: ['community.posts', scope],
+    queryFn: () =>
+      api<{ items: Post[]; total: number }>(`/community/posts?scope=${scope}`, { token }),
   });
 
   const post = useMutation({
@@ -103,11 +113,27 @@ export default function CommunityPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Community</h1>
-        <p className="text-sm text-muted-foreground">
-          Network, discuss, share — across institutes.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Community</h1>
+          <p className="text-sm text-muted-foreground">
+            Network, discuss, share — across institutes.
+          </p>
+        </div>
+        <div className="inline-flex rounded-md border bg-secondary/30 p-1 text-sm">
+          <button
+            onClick={() => setScope('all')}
+            className={`rounded px-3 py-1 transition ${scope === 'all' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setScope('mine')}
+            className={`rounded px-3 py-1 transition ${scope === 'mine' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+          >
+            {profile?.user?.institution?.name ?? 'My institute'}
+          </button>
+        </div>
       </div>
 
       {/* Composer */}
