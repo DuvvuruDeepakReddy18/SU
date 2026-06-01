@@ -325,17 +325,30 @@ model CommunityPost {
   authorId    String
   author      User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
   isAnonymous Boolean            @default(false)
+  // Optional title — Reddit-style. Null means it's a quick microblog post.
+  title       String?
   body        String
   tags        String[]
+  // Sub-community slug — "general" | "internships" | "placements" | "freelance"
+  // | "academic" | "rant" | "ama" | etc. Free-form but UI suggests defaults.
+  subreddit   String             @default("general")
   visibility  String             @default("public") // "public" | "college_only"
-  upvotes     Int                @default(0)        // kept for back-compat; now "likes"
-  downvotes   Int                @default(0)        // unused — kept to avoid breaking changes
+  upvotes     Int                @default(0)
+  downvotes   Int                @default(0)
+  // "Score" = upvotes - downvotes. Maintained transactionally on vote
+  // toggles so sort=top/hot doesn't need a heavy aggregate query.
+  score       Int                @default(0)
   commentsCount Int              @default(0)
+  // Moderator soft-delete. The post stays in the DB for audit, but the
+  // body is replaced with "[removed]" in the UI.
+  hiddenByMod Boolean            @default(false)
   createdAt   DateTime           @default(now())
   votes       CommunityVote[]
   comments    CommunityComment[]
 
   @@index([createdAt])
+  @@index([subreddit, score])
+  @@index([score])
 }
 
 // Renamed conceptually to "like" but model kept as CommunityVote for back-compat.
@@ -360,9 +373,17 @@ model CommunityComment {
   author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   isAnonymous Boolean       @default(false)
   body        String
+  // Threading: a null parent means top-level. Self-relation explicitly
+  // names the back-relation so Prisma stops being ambiguous.
+  parentCommentId String?
+  parent          CommunityComment?  @relation("Replies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies         CommunityComment[] @relation("Replies")
+  // Moderator soft-delete (same idea as posts).
+  hiddenByMod Boolean       @default(false)
   createdAt   DateTime      @default(now())
 
   @@index([postId, createdAt])
+  @@index([parentCommentId])
 }
 
 model Notification {
@@ -417,6 +438,12 @@ model InterviewBooking {
   panelNotes  String?
   result      String?  // "L4_VERIFIED" | "FEEDBACK_ONLY"
   meetingUrl  String?  // auto-generated Jitsi room URL
+  // Razorpay payment fields — null when the platform is in free-beta mode.
+  // Populated by /interviews/payments/verify on a successful signature check.
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  amountInrPaise    Int?
+  paidAt            DateTime?
   createdAt   DateTime @default(now())
 
   @@index([userId, scheduledAt])

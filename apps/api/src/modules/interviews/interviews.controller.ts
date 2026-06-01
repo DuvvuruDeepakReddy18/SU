@@ -1,21 +1,15 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpException,
-  HttpStatus,
-  Param,
-  Post,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { InterviewsService } from './interviews.service';
+import { RazorpayService } from './razorpay.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '@skillverify/shared';
 
 @Controller('interviews')
 export class InterviewsController {
-  constructor(private readonly svc: InterviewsService) {}
+  constructor(
+    private readonly svc: InterviewsService,
+    private readonly razorpay: RazorpayService,
+  ) {}
 
   @Get()
   list(@CurrentUser() u: JwtPayload) {
@@ -37,31 +31,35 @@ export class InterviewsController {
   }
 
   /**
-   * Razorpay order-creation stub. Returns 503 until both RAZORPAY_KEY_ID and
-   * RAZORPAY_KEY_SECRET are set. When live, this should create a Razorpay
-   * order and return the client_secret for the frontend checkout flow.
-   *
-   * Phase 1 keeps interviews free; the UI hides the payment step entirely
-   * when the feature flag is off (see GET /config → razorpay).
+   * Create a Razorpay order for an L4 interview. Returns 503 until
+   * RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET are set. The frontend uses the
+   * returned `keyId` + `orderId` to open the Razorpay checkout modal.
    */
   @Post('payments/order')
-  createPaymentOrder(@CurrentUser() _u: JwtPayload) {
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
-          message: 'Razorpay is not configured. Booking remains free during beta.',
-        },
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
-    }
-    // TODO: integrate Razorpay SDK here when credentials are available.
-    throw new HttpException(
-      {
-        statusCode: HttpStatus.NOT_IMPLEMENTED,
-        message: 'Razorpay integration coming in Phase 2.',
-      },
-      HttpStatus.NOT_IMPLEMENTED,
-    );
+  createPaymentOrder(@CurrentUser() u: JwtPayload) {
+    return this.razorpay.createInterviewOrder(u.sub);
+  }
+
+  /**
+   * Final step of the checkout flow. Frontend posts the {orderId,
+   * paymentId, signature} from Razorpay's success callback plus the slot
+   * details. We verify the HMAC signature, then atomically create the
+   * booking with the payment ids stamped on it.
+   */
+  @Post('payments/verify-and-book')
+  verifyAndBook(
+    @CurrentUser() u: JwtPayload,
+    @Body()
+    body: {
+      orderId: string;
+      paymentId: string;
+      signature: string;
+      scheduledAt: string;
+      notes?: string;
+      skillId?: string;
+    },
+  ) {
+    if (!body) throw new BadRequestException('Missing payment payload');
+    return this.razorpay.verifyAndBook(u.sub, body);
   }
 }

@@ -25,17 +25,18 @@ export type Exercise = {
 
 // ---------- starter templates ----------
 // Helpers that build typical I/O scaffolds so the data file stays compact.
+// Exported so the v2 curriculum module can reuse them.
 
-const py = (body: string) => `import sys
+export const py = (body: string) => `import sys
 data = sys.stdin.read().strip()
 ${body}
 `;
 
-const js = (body: string) => `const data = require('fs').readFileSync(0, 'utf8').trim();
+export const js = (body: string) => `const data = require('fs').readFileSync(0, 'utf8').trim();
 ${body}
 `;
 
-const cMain = (body: string) => `#include <stdio.h>
+export const cMain = (body: string) => `#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -46,7 +47,7 @@ ${body}
 }
 `;
 
-const cppMain = (body: string) => `#include <bits/stdc++.h>
+export const cppMain = (body: string) => `#include <bits/stdc++.h>
 using namespace std;
 
 int main() {
@@ -55,7 +56,7 @@ ${body}
 }
 `;
 
-const javaMain = (body: string) => `import java.util.*;
+export const javaMain = (body: string) => `import java.util.*;
 import java.io.*;
 
 public class Main {
@@ -68,7 +69,7 @@ ${body}
 
 // Common scaffolds keyed by input shape.
 // Each returns starters object.
-function s_void(stub: string) {
+export function s_void(stub: string) {
   return {
     python: `# ${stub}\nprint()`,
     javascript: `// ${stub}\nconsole.log("");`,
@@ -78,7 +79,7 @@ function s_void(stub: string) {
   };
 }
 
-function s_oneInt(stub: string) {
+export function s_oneInt(stub: string) {
   return {
     python: py(`n = int(data)\n# ${stub}\nprint()`),
     javascript: js(`const n = parseInt(data, 10);\n// ${stub}\nconsole.log("");`),
@@ -90,7 +91,7 @@ function s_oneInt(stub: string) {
   };
 }
 
-function s_twoInt(stub: string) {
+export function s_twoInt(stub: string) {
   return {
     python: py(`a, b = map(int, data.split())\n# ${stub}\nprint()`),
     javascript: js(`const [a, b] = data.split(/\\s+/).map(Number);\n// ${stub}\nconsole.log("");`),
@@ -102,7 +103,7 @@ function s_twoInt(stub: string) {
   };
 }
 
-function s_threeInt(stub: string) {
+export function s_threeInt(stub: string) {
   return {
     python: py(`a, b, c = map(int, data.split())\n# ${stub}\nprint()`),
     javascript: js(
@@ -118,7 +119,7 @@ function s_threeInt(stub: string) {
   };
 }
 
-function s_oneString(stub: string) {
+export function s_oneString(stub: string) {
   return {
     python: py(`s = data\n# ${stub}\nprint()`),
     javascript: js(`const s = data;\n// ${stub}\nconsole.log("");`),
@@ -132,7 +133,7 @@ function s_oneString(stub: string) {
   };
 }
 
-function s_intArrayFirstLineN(stub: string) {
+export function s_intArrayFirstLineN(stub: string) {
   return {
     python: py(
       `lines = data.split("\\n")\nn = int(lines[0])\narr = list(map(int, lines[1].split()))\n# ${stub}\nprint()`,

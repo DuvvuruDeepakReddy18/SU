@@ -11,6 +11,11 @@
 
 import { PrismaClient } from '@prisma/client';
 import { CURRICULUM } from './curriculum-data';
+import { CURRICULUM_V2 } from './curriculum-data-v2';
+
+// Single combined set — v1 + v2 additions. Slugs are namespaced (curr- vs
+// curr2-) so there's no collision risk.
+const ALL_EXERCISES = [...CURRICULUM, ...CURRICULUM_V2];
 
 const DIFFICULTY_POINTS = { easy: 5, medium: 12, hard: 25 } as const;
 
@@ -31,7 +36,7 @@ async function main() {
   let created = 0;
   let updated = 0;
 
-  for (const ex of CURRICULUM) {
+  for (const ex of ALL_EXERCISES) {
     const starterCode = {
       python: ex.starters.python,
       javascript: ex.starters.javascript,
@@ -89,7 +94,7 @@ async function main() {
   }
 
   console.log(
-    `Curriculum seeded: ${created} created, ${updated} updated (total ${CURRICULUM.length})`,
+    `Curriculum seeded: ${created} created, ${updated} updated (total ${ALL_EXERCISES.length})`,
   );
   console.log(
     `Tagged each problem into ${bySlug.size} language domains (python, javascript, c, cpp, java).`,

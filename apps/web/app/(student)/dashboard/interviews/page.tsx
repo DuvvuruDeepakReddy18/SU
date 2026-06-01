@@ -77,6 +77,68 @@ export default function InterviewsPage() {
   const passed = bookings?.filter((b) => b.status === 'passed').length ?? 0;
   const total = bookings?.length ?? 0;
 
+  // ---- Razorpay checkout flow ----
+  // Loaded from the official CDN on first click. Avoids ballooning the
+  // dashboard bundle when the user never opens this page.
+  const [paying, setPaying] = useState(false);
+  async function payAndBook() {
+    if (!selectedSlot) return;
+    setPaying(true);
+    try {
+      const order = await api<{
+        orderId: string;
+        amount: number;
+        currency: string;
+        keyId: string;
+      }>('/interviews/payments/order', { method: 'POST', token });
+
+      await loadRazorpayScript();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Razorpay = (window as any).Razorpay;
+      if (!Razorpay) throw new Error('Razorpay SDK failed to load.');
+
+      const rz = new Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'SkillVerify',
+        description: 'L4 Verification Interview',
+        order_id: order.orderId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        handler: async (response: any) => {
+          try {
+            await api('/interviews/payments/verify-and-book', {
+              method: 'POST',
+              token,
+              body: JSON.stringify({
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                scheduledAt: selectedSlot.toISOString(),
+                notes,
+              }),
+            });
+            toast.success('Payment received — interview booked.');
+            setShowPicker(false);
+            setSelectedSlot(null);
+            setNotes('');
+            qc.invalidateQueries({ queryKey: ['interviews.me'] });
+          } catch (e) {
+            toast.error(`Booking failed after payment: ${(e as Error).message}`);
+          }
+        },
+        modal: {
+          ondismiss: () => setPaying(false),
+        },
+        theme: { color: '#10b981' },
+      });
+      rz.open();
+    } catch (e) {
+      toast.error((e as Error).message);
+      setPaying(false);
+    }
+  }
+
   const weekDays = useMemo(() => {
     const days: Date[] = [];
     for (let i = 0; i < 7; i++) {
@@ -243,9 +305,15 @@ export default function InterviewsPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Focus areas (e.g. system design + Python) — optional"
                 />
-                <Button onClick={() => book.mutate()} disabled={book.isPending}>
-                  Confirm booking
-                </Button>
+                {config.razorpay ? (
+                  <Button onClick={() => payAndBook()} disabled={paying || book.isPending}>
+                    {paying ? 'Opening checkout…' : 'Pay & book'}
+                  </Button>
+                ) : (
+                  <Button onClick={() => book.mutate()} disabled={book.isPending}>
+                    Confirm booking
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
@@ -322,4 +390,19 @@ function Stat({ label, value }: { label: string; value: number }) {
       </CardContent>
     </Card>
   );
+}
+
+// Idempotent loader for the Razorpay checkout script. Skips re-injection
+// after the first call by checking window.Razorpay.
+function loadRazorpayScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).Razorpay) return resolve();
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Razorpay checkout script'));
+    document.body.appendChild(script);
+  });
 }

@@ -13,6 +13,7 @@ import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { CollegeIdService } from '../verifications/college-id.service';
 import { AcademicRecordService } from '../verifications/academic-record.service';
+import { CommunityService } from '../community/community.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 
@@ -25,6 +26,7 @@ export class AdminController {
   constructor(
     private readonly collegeId: CollegeIdService,
     private readonly academic: AcademicRecordService,
+    private readonly community: CommunityService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -97,5 +99,22 @@ export class AdminController {
   @Post('institutions/:id/reject')
   async rejectInstitution(@Param('id') id: string) {
     return this.prisma.institution.delete({ where: { id } });
+  }
+
+  // ---- Community moderation ----
+
+  @Post('community/posts/:id/hide')
+  hideCommunityPost(@Param('id') id: string) {
+    return this.community.hidePostByMod(id);
+  }
+
+  @Post('community/posts/:id/unhide')
+  unhideCommunityPost(@Param('id') id: string) {
+    return this.community.unhidePostByMod(id);
+  }
+
+  @Post('community/comments/:id/hide')
+  hideCommunityComment(@Param('id') id: string) {
+    return this.community.hideCommentByMod(id);
   }
 }

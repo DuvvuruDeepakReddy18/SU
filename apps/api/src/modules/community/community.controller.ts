@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { CommunityService } from './community.service';
-import { CommunityPostCreateDto } from './dto';
+import { CommunityPostCreateDto, CommunityCommentCreateDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '@skillverify/shared';
 
@@ -26,6 +26,8 @@ export class CommunityController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
     @Query('scope') scope: 'all' | 'mine' | undefined,
+    @Query('subreddit') subreddit: string | undefined,
+    @Query('sort') sort: 'hot' | 'new' | 'top' | undefined,
   ) {
     return this.svc.list({
       userId: u.sub,
@@ -33,7 +35,14 @@ export class CommunityController {
       page,
       pageSize,
       scope: scope === 'mine' ? 'mine' : 'all',
+      subreddit: subreddit?.toLowerCase() || null,
+      sort: sort && ['hot', 'new', 'top'].includes(sort) ? sort : 'new',
     });
+  }
+
+  @Get('subreddits')
+  subreddits() {
+    return this.svc.listSubreddits();
   }
 
   @Post()
@@ -41,9 +50,22 @@ export class CommunityController {
     return this.svc.create(u.sub, dto);
   }
 
+  /**
+   * Toggle a vote. Body: `{ value: 1 }` to upvote, `{ value: -1 }` to
+   * downvote. Sending the same value twice removes the vote.
+   */
+  @Post(':id/vote')
+  vote(@CurrentUser() u: JwtPayload, @Param('id') id: string, @Body() body: { value: 1 | -1 }) {
+    if (body?.value !== 1 && body?.value !== -1) {
+      throw new BadRequestException('value must be 1 or -1');
+    }
+    return this.svc.vote(u.sub, id, body.value);
+  }
+
+  // Back-compat alias for the old like-only UI.
   @Post(':id/like')
   like(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
-    return this.svc.toggleLike(u.sub, id);
+    return this.svc.vote(u.sub, id, 1);
   }
 
   @Delete(':id')
@@ -62,15 +84,9 @@ export class CommunityController {
   addComment(
     @CurrentUser() u: JwtPayload,
     @Param('id') id: string,
-    @Body() body: { body: string; isAnonymous?: boolean },
+    @Body(ZodValidationPipe) dto: CommunityCommentCreateDto,
   ) {
-    if (!body?.body || body.body.trim().length < 1) {
-      throw new BadRequestException('Comment body required');
-    }
-    if (body.body.length > 2000) {
-      throw new BadRequestException('Comment too long (max 2000 chars)');
-    }
-    return this.svc.addComment(u.sub, id, body.body.trim(), !!body.isAnonymous);
+    return this.svc.addComment(u.sub, id, dto);
   }
 
   @Delete('comments/:commentId')
