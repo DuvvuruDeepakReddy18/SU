@@ -56,6 +56,80 @@
   }
 }
 
+/* ---------- Landing page: cream / liquid-glass theme ---------- */
+/* Scoped palette override. Wrapping the landing <main> in `.landing-cream`
+ * forces a warm cream light theme regardless of the user's dark/light
+ * preference, so every CSS-var-driven component (cards, borders, muted text)
+ * resolves to the landing aesthetic without per-element edits. */
+.landing-cream {
+  --background: 36 38% 94%;
+  --foreground: 28 18% 17%;
+  --card: 40 44% 99%;
+  --card-foreground: 28 18% 17%;
+  --popover: 40 44% 99%;
+  --popover-foreground: 28 18% 17%;
+  --primary: 28 22% 15%;            /* dark pill buttons, like the reference */
+  --primary-foreground: 40 33% 96%;
+  --secondary: 36 28% 90%;
+  --secondary-foreground: 28 18% 17%;
+  --muted: 36 28% 90%;
+  --muted-foreground: 30 9% 42%;
+  --accent: 36 28% 90%;
+  --accent-foreground: 28 18% 17%;
+  --border: 34 22% 85%;
+  --input: 34 22% 85%;
+  --ring: 28 22% 15%;
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+}
+
+/* Iridescent cream backdrop — soft pastel blobs over warm cream. */
+.cream-aurora {
+  background:
+    radial-gradient(40% 50% at 78% 18%, rgba(255, 190, 200, 0.45), transparent 70%),
+    radial-gradient(45% 55% at 88% 60%, rgba(255, 214, 178, 0.40), transparent 70%),
+    radial-gradient(40% 50% at 20% 30%, rgba(214, 205, 245, 0.40), transparent 70%),
+    radial-gradient(50% 60% at 30% 85%, rgba(190, 230, 210, 0.35), transparent 70%),
+    hsl(36 38% 94%);
+}
+
+/* A frosted-glass pearl bubble — the orb material from the reference. */
+.glass-orb {
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.5) 52%, rgba(255, 255, 255, 0.18) 100%);
+  backdrop-filter: blur(6px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 3px 8px rgba(255, 255, 255, 0.9),
+    inset 0 -10px 18px rgba(176, 156, 200, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 14px 30px rgba(120, 100, 150, 0.20);
+}
+
+/* Iridescent sheen overlay — slowly drifting rainbow film. */
+.iridescent-film {
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 183, 197, 0.55),
+    rgba(255, 221, 179, 0.5),
+    rgba(197, 226, 197, 0.5),
+    rgba(186, 211, 245, 0.55),
+    rgba(225, 190, 231, 0.55),
+    rgba(255, 183, 197, 0.55)
+  );
+  mix-blend-mode: screen;
+  filter: blur(3px);
+  animation: iridescent-spin 14s linear infinite;
+}
+@keyframes iridescent-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iridescent-film { animation: none; }
+}
+
 /* ---------- Resume builder print-to-PDF ---------- */
 /* When the user prints from /dashboard/profile/resume-builder, hide every
  * chrome element and only show .resume-preview at full A4 size. */

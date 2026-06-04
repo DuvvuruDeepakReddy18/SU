@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { API_BASE } from '@/lib/api';
 import { COURSE_PROGRAMS } from '@skillverify/shared';
 import { InstitutionPicker, type Institution } from '@/components/institution-picker';
+import { EVENTS, track } from '@/lib/analytics';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -92,6 +93,13 @@ export default function SignupPage() {
       }
       const signin = await signIn('credentials', { email, password, redirect: false });
       if (signin?.error) throw new Error('Created, but sign-in failed');
+      track(EVENTS.SIGNUP_COMPLETED, {
+        institutionId: institution.id,
+        courseProgram,
+      });
+      // College ID was uploaded as the precondition of signup, so capture
+      // that funnel step too — same single user event.
+      track(EVENTS.COLLEGE_ID_UPLOADED, { institutionId: institution.id });
       toast.success('Welcome to SkillVerify! Your ID is under review.');
       router.push('/dashboard');
     } catch (err) {

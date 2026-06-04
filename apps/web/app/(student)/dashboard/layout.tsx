@@ -14,7 +14,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
       <Sidebar />
       <div className="flex flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 px-6 py-8">{children}</main>
+        <main className="flex-1 px-4 py-6 md:px-6 md:py-8">{children}</main>
       </div>
       {/* Floating SkillBot — visible on every dashboard page */}
       <ChatWidget />

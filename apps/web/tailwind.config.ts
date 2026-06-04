@@ -39,6 +39,24 @@ const config: Config = {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        // Slow background-position sweep used by the gradient-text accent
+        // word in the landing hero. Reads as a living shimmer without
+        // shouting for attention.
+        shimmer: {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
+        // Gentle vertical bob for the central liquid-glass orb.
+        float: {
+          '0%, 100%': { transform: 'translate(-50%, -50%) translateY(0px)' },
+          '50%': { transform: 'translate(-50%, -50%) translateY(-12px)' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 4s ease-in-out infinite',
+        float: 'float 6s ease-in-out infinite',
+      },
     },
   },
   plugins: [animate],

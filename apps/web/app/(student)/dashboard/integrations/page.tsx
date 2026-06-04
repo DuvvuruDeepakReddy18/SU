@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 import { useConfig } from '@/lib/use-config';
 import { Github, Linkedin, Link2, Plus, Trash2, ExternalLink, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProfileTabs } from '@/components/profile-tabs';
 
 type Integration = {
   provider: string;
@@ -119,152 +120,155 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Built-in providers */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Github className="h-4 w-4" /> GitHub
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Imports your public repos as projects — needed for L3 verification.
-            </p>
-            {byProvider.github?.connected ? (
-              <div className="space-y-2">
-                <Badge variant="success">Connected</Badge>
-                <Button onClick={() => sync.mutate('github')} disabled={sync.isPending}>
-                  {sync.isPending ? 'Syncing…' : 'Sync now'}
-                </Button>
-              </div>
-            ) : (
-              <Button onClick={() => connectGithub.mutate()}>Connect GitHub</Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {(['linkedin', 'leetcode', 'coursera'] as const).map((p) => (
-          <Card key={p}>
+    <div className="space-y-4">
+      <ProfileTabs />
+      <div className="space-y-6">
+        {/* Built-in providers */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 capitalize">
-                {p === 'linkedin' ? <Linkedin className="h-4 w-4" /> : null}
-                {p}
+              <CardTitle className="flex items-center gap-2">
+                <Github className="h-4 w-4" /> GitHub
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Badge variant="secondary">Coming soon</Badge>
-              <p className="mt-2 text-sm text-muted-foreground">
-                OAuth coming in Phase 2. For now, add the URL under <strong>Custom links</strong>{' '}
-                below.
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Imports your public repos as projects — needed for L3 verification.
               </p>
+              {byProvider.github?.connected ? (
+                <div className="space-y-2">
+                  <Badge variant="success">Connected</Badge>
+                  <Button onClick={() => sync.mutate('github')} disabled={sync.isPending}>
+                    {sync.isPending ? 'Syncing…' : 'Sync now'}
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={() => connectGithub.mutate()}>Connect GitHub</Button>
+              )}
             </CardContent>
           </Card>
-        ))}
 
+          {(['linkedin', 'leetcode', 'coursera'] as const).map((p) => (
+            <Card key={p}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 capitalize">
+                  {p === 'linkedin' ? <Linkedin className="h-4 w-4" /> : null}
+                  {p}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Badge variant="secondary">Coming soon</Badge>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  OAuth not live yet. For now, add the URL under <strong>Custom links</strong>{' '}
+                  below.
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileCheck className="h-4 w-4" /> DigiLocker / NAD
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Imports your academic records and degree certificates directly from the
+                Govt-of-India DigiLocker registry — bypasses manual marksheet uploads.
+              </p>
+              {config.digiLocker ? (
+                <Button
+                  onClick={() => connectDigiLocker.mutate()}
+                  disabled={connectDigiLocker.isPending}
+                >
+                  {connectDigiLocker.isPending ? 'Redirecting…' : 'Connect DigiLocker'}
+                </Button>
+              ) : (
+                <>
+                  <Badge variant="secondary">Coming soon</Badge>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Pending Govt-of-India API onboarding. When approved, your admin sets{' '}
+                    <code className="text-foreground">DIGILOCKER_CLIENT_ID</code> in env and this
+                    tile flips to a connect button.
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Custom links */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileCheck className="h-4 w-4" /> DigiLocker / NAD
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Link2 className="h-4 w-4 text-primary" /> Custom links
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Imports your academic records and degree certificates directly from the Govt-of-India
-              DigiLocker registry — bypasses manual marksheet uploads.
+              Add any profile link you want shown on your portfolio — Kaggle, HackerRank, personal
+              blog, Medium, Behance, anything.
             </p>
-            {config.digiLocker ? (
-              <Button
-                onClick={() => connectDigiLocker.mutate()}
-                disabled={connectDigiLocker.isPending}
-              >
-                {connectDigiLocker.isPending ? 'Redirecting…' : 'Connect DigiLocker'}
-              </Button>
-            ) : (
-              <>
-                <Badge variant="secondary">Coming soon</Badge>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Pending Govt-of-India API onboarding. When approved, your admin sets{' '}
-                  <code className="text-foreground">DIGILOCKER_CLIENT_ID</code> in env and this tile
-                  flips to a connect button.
-                </p>
-              </>
+
+            {links.length > 0 && (
+              <ul className="space-y-2">
+                {links.map((l, i) => (
+                  <li
+                    key={`${l.label}-${i}`}
+                    className="flex items-center justify-between rounded-md border p-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate">{l.label}</div>
+                        <a
+                          href={l.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary hover:underline truncate block max-w-md"
+                        >
+                          {l.url}
+                        </a>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeLink(i)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
+
+            <div className="grid gap-2 md:grid-cols-[1fr_2fr_auto] md:items-end">
+              <div>
+                <div className="mb-1 text-xs text-muted-foreground">Label</div>
+                <Input
+                  placeholder="Kaggle"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addLink()}
+                />
+              </div>
+              <div>
+                <div className="mb-1 text-xs text-muted-foreground">URL</div>
+                <Input
+                  placeholder="https://kaggle.com/your-username"
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addLink()}
+                />
+              </div>
+              <Button onClick={addLink} disabled={!newLabel.trim() || !newUrl.trim()}>
+                <Plus className="h-4 w-4" /> Add
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Custom links */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Link2 className="h-4 w-4 text-primary" /> Custom links
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Add any profile link you want shown on your portfolio — Kaggle, HackerRank, personal
-            blog, Medium, Behance, anything.
-          </p>
-
-          {links.length > 0 && (
-            <ul className="space-y-2">
-              {links.map((l, i) => (
-                <li
-                  key={`${l.label}-${i}`}
-                  className="flex items-center justify-between rounded-md border p-3"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{l.label}</div>
-                      <a
-                        href={l.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-primary hover:underline truncate block max-w-md"
-                      >
-                        {l.url}
-                      </a>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removeLink(i)}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="grid gap-2 md:grid-cols-[1fr_2fr_auto] md:items-end">
-            <div>
-              <div className="mb-1 text-xs text-muted-foreground">Label</div>
-              <Input
-                placeholder="Kaggle"
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addLink()}
-              />
-            </div>
-            <div>
-              <div className="mb-1 text-xs text-muted-foreground">URL</div>
-              <Input
-                placeholder="https://kaggle.com/your-username"
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addLink()}
-              />
-            </div>
-            <Button onClick={addLink} disabled={!newLabel.trim() || !newUrl.trim()}>
-              <Plus className="h-4 w-4" /> Add
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

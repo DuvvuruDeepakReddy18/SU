@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Providers } from '@/components/providers';
+import { SmoothScrollProvider } from '@/components/smooth-scroll-provider';
 
 export const metadata: Metadata = {
   title: {
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background">
+        <SmoothScrollProvider />
         <Providers>{children}</Providers>
       </body>
     </html>

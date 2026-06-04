@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { ProblemLeaderboard } from '@/components/problem-leaderboard';
+import { EVENTS, track } from '@/lib/analytics';
 import {
   Lightbulb,
   BookOpen,
@@ -103,6 +104,18 @@ export default function ProblemPage({ params }: { params: { slug: string } }) {
     queryFn: () => api<Submission>(`/practice/submissions/${submissionId}`, { token }),
     refetchInterval: (q) => (q.state.data?.verdict === 'PENDING' ? 1500 : false),
   });
+
+  // Fire "first problem solved" once per user, ever. localStorage avoids an
+  // extra API hit and survives across sessions. The event itself is harmless
+  // if it fires twice (PostHog dedups by distinctId), but we're polite.
+  useEffect(() => {
+    if (sub?.verdict !== 'AC' || typeof window === 'undefined') return;
+    const userKey = (session as { user?: { email?: string } } | null)?.user?.email ?? 'anon';
+    const flag = `sv:first-ac:${userKey}`;
+    if (localStorage.getItem(flag)) return;
+    localStorage.setItem(flag, '1');
+    track(EVENTS.FIRST_PROBLEM_SOLVED, { slug: params.slug, language: lang });
+  }, [sub?.verdict, session, params.slug, lang]);
 
   const submit = useMutation({
     mutationFn: () =>

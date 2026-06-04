@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { api } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 import { Upload, ShieldCheck, FileText, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { EVENTS, track } from '@/lib/analytics';
+import { ProfileTabs } from '@/components/profile-tabs';
 
 type Profile = {
   collegeIdUrl: string | null;
@@ -121,12 +123,13 @@ export default function VerificationsPage() {
     fd.append('file', file);
     const tid = toast.loading('Uploading College ID…');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/profile/college-id`, {
+      const res = await fetch(`${API_BASE}/profile/college-id`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
       if (!res.ok) throw new Error((await res.text()).slice(0, 200));
+      track(EVENTS.COLLEGE_ID_UPLOADED, { source: 'dashboard_reupload' });
       toast.success('College ID uploaded — pending review', { id: tid });
       qc.invalidateQueries({ queryKey: ['profile.me'] });
     } catch (e) {
@@ -140,7 +143,7 @@ export default function VerificationsPage() {
     const tid = toast.loading(`Uploading semester ${semester} marksheet…`);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/verifications/academic-records/upload?semester=${semester}`,
+        `${API_BASE}/verifications/academic-records/upload?semester=${semester}`,
         {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
@@ -151,6 +154,7 @@ export default function VerificationsPage() {
         const t = await res.text();
         throw new Error(t.slice(0, 200));
       }
+      track(EVENTS.MARKSHEET_UPLOADED, { semester });
       toast.success('Marksheet uploaded — analysing…', { id: tid });
       qc.invalidateQueries({ queryKey: ['verifications.academic-records'] });
       qc.invalidateQueries({ queryKey: ['profile.me'] });
@@ -175,185 +179,196 @@ export default function VerificationsPage() {
   const verifiedSems = (records ?? []).filter((r) => r.verificationStatus === 'verified').length;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Verification Center</h1>
-        <p className="text-sm text-muted-foreground">
-          Unverified profiles are not recommended to recruiters or freelance clients. Verify each
-          piece of data to unlock the green badge on your portfolio.
-        </p>
-      </div>
-
-      {/* Status strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatusTile
-          label="College ID"
-          state={collegeIdState.label === 'Verified' ? 'verified' : 'unverified'}
-          detail={collegeIdState.label}
-        />
-        <StatusTile
-          label="CGPA"
-          state={profile?.cgpaVerifiedAt ? 'verified' : 'unverified'}
-          detail={
-            profile?.cgpaVerifiedAt
-              ? `${profile.cgpa?.toFixed(2) ?? '—'} (verified)`
-              : 'No verified records yet'
-          }
-        />
-        <StatusTile
-          label="Semester results"
-          state={verifiedSems > 0 ? 'verified' : 'unverified'}
-          detail={`${verifiedSems} / ${totalSemesters} verified`}
-        />
-        <StatusTile
-          label="Skills verified"
-          state={
-            (summary?.skills.filter((s) => s.highestVerificationLayer !== 'L0_UNVERIFIED').length ??
-              0) > 0
-              ? 'verified'
-              : 'unverified'
-          }
-          detail={`${summary?.skills.filter((s) => s.highestVerificationLayer !== 'L0_UNVERIFIED').length ?? 0} / ${summary?.skills.length ?? 0}`}
-        />
-      </div>
-
-      {/* College ID */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ShieldCheck className="h-4 w-4 text-primary" /> College ID
-            <Badge variant={collegeIdState.variant} className="ml-2">
-              {collegeIdState.label}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+    <div className="space-y-4">
+      <ProfileTabs />
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Verification Center</h1>
           <p className="text-sm text-muted-foreground">
-            Already uploaded at signup. You can replace it here if it was rejected.
+            Unverified profiles are not recommended to recruiters or freelance clients. Verify each
+            piece of data to unlock the green badge on your portfolio.
           </p>
-          {profile?.collegeIdRejectionReason && (
-            <div className="rounded border border-destructive/40 bg-destructive/5 p-3 text-xs">
-              <strong>Rejected:</strong> {profile.collegeIdRejectionReason}
-            </div>
-          )}
-          <div className="flex items-center gap-3">
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && uploadCollegeId(e.target.files[0])}
-              />
-              <span className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm hover:bg-secondary">
-                <Upload className="h-4 w-4" />
-                {profile?.collegeIdUrl ? 'Replace file' : 'Upload College ID'}
-              </span>
-            </label>
-            {profile?.collegeIdUrl && (
-              <a
-                href={profile.collegeIdUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm text-primary hover:underline"
-              >
-                View current →
-              </a>
+        </div>
+
+        {/* Status strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatusTile
+            label="College ID"
+            state={collegeIdState.label === 'Verified' ? 'verified' : 'unverified'}
+            detail={collegeIdState.label}
+          />
+          <StatusTile
+            label="CGPA"
+            state={profile?.cgpaVerifiedAt ? 'verified' : 'unverified'}
+            detail={
+              profile?.cgpaVerifiedAt
+                ? `${profile.cgpa?.toFixed(2) ?? '—'} (verified)`
+                : 'No verified records yet'
+            }
+          />
+          <StatusTile
+            label="Semester results"
+            state={verifiedSems > 0 ? 'verified' : 'unverified'}
+            detail={`${verifiedSems} / ${totalSemesters} verified`}
+          />
+          <StatusTile
+            label="Skills verified"
+            state={
+              (summary?.skills.filter((s) => s.highestVerificationLayer !== 'L0_UNVERIFIED')
+                .length ?? 0) > 0
+                ? 'verified'
+                : 'unverified'
+            }
+            detail={`${summary?.skills.filter((s) => s.highestVerificationLayer !== 'L0_UNVERIFIED').length ?? 0} / ${summary?.skills.length ?? 0}`}
+          />
+        </div>
+
+        {/* College ID */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldCheck className="h-4 w-4 text-primary" /> College ID
+              <Badge variant={collegeIdState.variant} className="ml-2">
+                {collegeIdState.label}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Already uploaded at signup. You can replace it here if it was rejected.
+            </p>
+            {profile?.collegeIdRejectionReason && (
+              <div className="rounded border border-destructive/40 bg-destructive/5 p-3 text-xs">
+                <strong>Rejected:</strong> {profile.collegeIdRejectionReason}
+              </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Semester-wise CGPA verification */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="h-4 w-4 text-primary" /> Semester-wise CGPA verification
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-md border border-amber-300/40 bg-amber-50/40 p-3 text-xs dark:bg-amber-900/10">
-            <strong>Required in each document:</strong>
-            <ol className="mt-1 list-decimal pl-4 space-y-0.5">
-              <li>Student name (must match your profile name)</li>
-              <li>Institute / university name (must match your registered institution)</li>
-              <li>Date / year of examination (mandatory)</li>
-              <li>SGPA / CGPA clearly visible</li>
-              <li>Official stamp or digital watermark (preferred)</li>
-            </ol>
-            <div className="mt-1">
-              Uploads that fail any of these or look digitally edited are flagged for manual review.
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Array.from({ length: totalSemesters }, (_, i) => i + 1).map((sem) => {
-              const rec = bySemester.get(sem);
-              return (
-                <SemesterTile
-                  key={sem}
-                  semester={sem}
-                  record={rec}
-                  onUpload={(f) => uploadSemester(sem, f)}
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && uploadCollegeId(e.target.files[0])}
                 />
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Certifications (L2) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>L2 · Add certification</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3">
-          <Input
-            value={cert.issuer}
-            onChange={(e) => setCert({ ...cert, issuer: e.target.value })}
-            placeholder="Issuer (e.g. AWS, Coursera)"
-          />
-          <Input
-            value={cert.courseName}
-            onChange={(e) => setCert({ ...cert, courseName: e.target.value })}
-            placeholder="Course name"
-          />
-          <Button
-            onClick={() => addCert.mutate()}
-            disabled={addCert.isPending || !cert.issuer || !cert.courseName}
-          >
-            Submit
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Skill verification status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {(summary?.skills.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted-foreground">No skills added yet.</p>
-          ) : (
-            <div className="grid gap-2 md:grid-cols-2">
-              {summary?.skills.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between rounded-md border p-3 text-sm"
+                <span className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm hover:bg-secondary">
+                  <Upload className="h-4 w-4" />
+                  {profile?.collegeIdUrl ? 'Replace file' : 'Upload College ID'}
+                </span>
+              </label>
+              {profile?.collegeIdUrl && (
+                <a
+                  href={profile.collegeIdUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-primary hover:underline"
                 >
-                  <span className="font-medium">{s.skill.name}</span>
-                  <Badge
-                    variant={
-                      s.highestVerificationLayer === 'L0_UNVERIFIED' ? 'secondary' : 'default'
-                    }
-                  >
-                    {s.highestVerificationLayer.replace('_', ' ')}
-                  </Badge>
-                </div>
-              ))}
+                  View current →
+                </a>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Semester-wise CGPA verification */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4 text-primary" /> Semester-wise CGPA verification
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 font-medium">
+                <Clock className="h-3 w-3" /> Reviewers usually respond within 24 hours
+              </span>
+              <span className="text-muted-foreground/70">·</span>
+              <span>You&apos;ll get an email when each marksheet is reviewed.</span>
+            </div>
+            <div className="rounded-md border border-amber-300/40 bg-amber-50/40 p-3 text-xs dark:bg-amber-900/10">
+              <strong>Required in each document:</strong>
+              <ol className="mt-1 list-decimal pl-4 space-y-0.5">
+                <li>Student name (must match your profile name)</li>
+                <li>Institute / university name (must match your registered institution)</li>
+                <li>Date / year of examination (mandatory)</li>
+                <li>SGPA / CGPA clearly visible</li>
+                <li>Official stamp or digital watermark (preferred)</li>
+              </ol>
+              <div className="mt-1">
+                Uploads that fail any of these or look digitally edited are flagged for manual
+                review.
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Array.from({ length: totalSemesters }, (_, i) => i + 1).map((sem) => {
+                const rec = bySemester.get(sem);
+                return (
+                  <SemesterTile
+                    key={sem}
+                    semester={sem}
+                    record={rec}
+                    onUpload={(f) => uploadSemester(sem, f)}
+                  />
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Certifications (L2) */}
+        <Card>
+          <CardHeader>
+            <CardTitle>L2 · Add certification</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+            <Input
+              value={cert.issuer}
+              onChange={(e) => setCert({ ...cert, issuer: e.target.value })}
+              placeholder="Issuer (e.g. AWS, Coursera)"
+            />
+            <Input
+              value={cert.courseName}
+              onChange={(e) => setCert({ ...cert, courseName: e.target.value })}
+              placeholder="Course name"
+            />
+            <Button
+              onClick={() => addCert.mutate()}
+              disabled={addCert.isPending || !cert.issuer || !cert.courseName}
+            >
+              Submit
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Skill verification status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(summary?.skills.length ?? 0) === 0 ? (
+              <p className="text-sm text-muted-foreground">No skills added yet.</p>
+            ) : (
+              <div className="grid gap-2 md:grid-cols-2">
+                {summary?.skills.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between rounded-md border p-3 text-sm"
+                  >
+                    <span className="font-medium">{s.skill.name}</span>
+                    <Badge
+                      variant={
+                        s.highestVerificationLayer === 'L0_UNVERIFIED' ? 'secondary' : 'default'
+                      }
+                    >
+                      {s.highestVerificationLayer.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

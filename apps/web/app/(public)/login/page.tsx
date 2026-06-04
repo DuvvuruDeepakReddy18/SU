@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,20 @@ export default function LoginPage() {
       toast.error('Invalid email or password');
       return;
     }
-    router.push('/dashboard');
+    // Route by role — recruiters → company portal, institution admins →
+    // institution portal, everyone else → student dashboard.
+    const session = await getSession();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const role = (session as any)?.role as string | undefined;
+    router.push(
+      role === 'RECRUITER'
+        ? '/company'
+        : role === 'INSTITUTION_ADMIN'
+          ? '/institution'
+          : role === 'INTERVIEWER'
+            ? '/interviewer'
+            : '/dashboard',
+    );
   }
 
   return (
@@ -78,6 +91,16 @@ export default function LoginPage() {
             New here?{' '}
             <Link className="text-primary hover:underline" href="/signup">
               Create an account
+            </Link>
+          </p>
+          <p className="mt-1 text-center text-xs text-muted-foreground">
+            Hiring?{' '}
+            <Link className="text-primary hover:underline" href="/company/signup">
+              Create a recruiter account
+            </Link>
+            {' · '}
+            <Link className="text-primary hover:underline" href="/institution/signup">
+              For colleges
             </Link>
           </p>
         </CardContent>

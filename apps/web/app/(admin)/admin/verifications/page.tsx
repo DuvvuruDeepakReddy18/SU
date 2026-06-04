@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { CheckCircle2, XCircle, FileImage, ExternalLink } from 'lucide-react';
+import { RejectDialog } from '@/components/reject-dialog';
+import type { RejectionReason } from '@skillverify/shared';
 
 type Pending = {
   userId: string;
@@ -26,6 +28,10 @@ export default function VerificationsQueuePage() {
   const token = (session as any)?.accessToken as string | undefined;
   const queryClient = useQueryClient();
 
+  // Which row's "Reject" dialog is open (null = no dialog visible).
+  const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
+  const [rejectBusy, setRejectBusy] = useState(false);
+
   const { data: items, isLoading } = useQuery({
     enabled: !!token,
     queryKey: ['admin.verifications.collegeIds'],
@@ -40,15 +46,20 @@ export default function VerificationsQueuePage() {
     queryClient.invalidateQueries({ queryKey: ['admin.verifications.collegeIds'] });
   }
 
-  async function reject(userId: string) {
-    const reason = window.prompt('Reason for rejection (visible to student):');
-    if (!reason) return;
-    await api(`/admin/verifications/college-ids/${userId}/reject`, {
-      method: 'POST',
-      token,
-      body: JSON.stringify({ reason }),
-    });
-    queryClient.invalidateQueries({ queryKey: ['admin.verifications.collegeIds'] });
+  async function submitReject(payload: { reasonCode: RejectionReason; reasonNote: string | null }) {
+    if (!rejectingUserId) return;
+    setRejectBusy(true);
+    try {
+      await api(`/admin/verifications/college-ids/${rejectingUserId}/reject`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify(payload),
+      });
+      setRejectingUserId(null);
+      queryClient.invalidateQueries({ queryKey: ['admin.verifications.collegeIds'] });
+    } finally {
+      setRejectBusy(false);
+    }
   }
 
   return (
@@ -70,8 +81,21 @@ export default function VerificationsQueuePage() {
       )}
 
       {items?.map((p) => (
-        <QueueRow key={p.userId} item={p} onApprove={approve} onReject={reject} />
+        <QueueRow
+          key={p.userId}
+          item={p}
+          onApprove={approve}
+          onReject={(id) => setRejectingUserId(id)}
+        />
       ))}
+
+      <RejectDialog
+        open={!!rejectingUserId}
+        onClose={() => setRejectingUserId(null)}
+        onSubmit={submitReject}
+        busy={rejectBusy}
+        title="Reject college ID"
+      />
     </div>
   );
 }

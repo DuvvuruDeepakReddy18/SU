@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { CheckCircle2, XCircle } from 'lucide-react';
+import { RejectDialog } from '@/components/reject-dialog';
+import type { RejectionReason } from '@skillverify/shared';
 
 type Inst = {
   id: string;
@@ -24,6 +27,8 @@ export default function PendingInstitutionsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const token = (session as any)?.accessToken as string | undefined;
   const qc = useQueryClient();
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const { data } = useQuery({
     enabled: !!token,
@@ -35,10 +40,21 @@ export default function PendingInstitutionsPage() {
     await api(`/admin/institutions/${id}/approve`, { method: 'POST', token });
     qc.invalidateQueries({ queryKey: ['admin.institutions.pending'] });
   }
-  async function reject(id: string) {
-    if (!confirm('Delete this institution suggestion?')) return;
-    await api(`/admin/institutions/${id}/reject`, { method: 'POST', token });
-    qc.invalidateQueries({ queryKey: ['admin.institutions.pending'] });
+
+  async function submitReject(payload: { reasonCode: RejectionReason; reasonNote: string | null }) {
+    if (!rejectingId) return;
+    setBusy(true);
+    try {
+      await api(`/admin/institutions/${rejectingId}/reject`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify(payload),
+      });
+      setRejectingId(null);
+      qc.invalidateQueries({ queryKey: ['admin.institutions.pending'] });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -69,13 +85,21 @@ export default function PendingInstitutionsPage() {
               <Button size="sm" onClick={() => approve(inst.id)}>
                 <CheckCircle2 className="h-4 w-4 mr-1" /> Approve
               </Button>
-              <Button size="sm" variant="outline" onClick={() => reject(inst.id)}>
-                <XCircle className="h-4 w-4 mr-1" /> Delete
+              <Button size="sm" variant="outline" onClick={() => setRejectingId(inst.id)}>
+                <XCircle className="h-4 w-4 mr-1" /> Reject
               </Button>
             </div>
           </CardContent>
         </Card>
       ))}
+
+      <RejectDialog
+        open={!!rejectingId}
+        onClose={() => setRejectingId(null)}
+        onSubmit={submitReject}
+        busy={busy}
+        title="Reject institution suggestion"
+      />
     </div>
   );
 }

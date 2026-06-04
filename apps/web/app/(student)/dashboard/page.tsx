@@ -4,7 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { serverApi } from '@/lib/server-api';
 import { VerificationPill } from '@/components/verification-pill';
-import { DashboardAvatarWrapper } from '@/components/dashboard-avatar-wrapper';
+import { ActionRequiredBanner } from '@/components/action-required-banner';
+import { OnboardingWizard } from '@/components/onboarding-wizard';
+import { RecruiterInterestNudge } from '@/components/recruiter-interest-nudge';
 import { ExternalLink, Sparkles, Code2, Trophy, Briefcase, Building2, Video } from 'lucide-react';
 
 type Profile = {
@@ -79,6 +81,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Top-of-page action ribbon — only renders for rejected / pending IDs */}
+      <ActionRequiredBanner />
+
+      {/* New-user ramp — auto-hides once all 4 setup steps are done or dismissed */}
+      <OnboardingWizard />
+
+      {/* Shown only when a company has reached out */}
+      <RecruiterInterestNudge />
+
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-3">
@@ -106,9 +117,6 @@ export default async function DashboardPage() {
           </Link>
         )}
       </header>
-
-      {/* 3D avatar w/ orbiting nav bubbles */}
-      <DashboardAvatarWrapper studentName={profile?.fullName} />
 
       {/* Hero row: points + level + portfolio link */}
       <div className="grid gap-4 lg:grid-cols-[1fr_350px]">

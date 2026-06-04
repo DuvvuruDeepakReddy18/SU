@@ -16,33 +16,85 @@ const SUGGESTIONS = [
   'Recommend a practice domain for me',
 ];
 
+const GREETING: Msg = {
+  role: 'assistant',
+  content:
+    "Hey — I'm SkillBot. I can explain how verification works, help you find verified peers in your college, or point you at the right page. What's up?",
+};
+
+const MAX_PERSISTED = 50; // last N turns; keeps localStorage small
+
+function storageKey(email: string | null | undefined): string | null {
+  if (!email) return null;
+  return `skillbot:history:${email}`;
+}
+
 /**
- * Floating bottom-right chat button. Opens a slide-up panel with conversation
- * state held in component memory (no DB persistence — fine for v1). Calls the
- * NestJS /chat endpoint, which decides whether to do SQL-based retrieval.
+ * Floating bottom-right chat button. Conversation state lives in
+ * localStorage keyed by the user's email — refresh keeps the thread, sign-out
+ * (handled by Settings) doesn't leak across accounts because each account
+ * has its own key. Calls the NestJS /chat endpoint, which decides whether
+ * to do SQL-based retrieval.
  */
 export function ChatWidget() {
   const { data: session } = useSession();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const token = (session as any)?.accessToken as string | undefined;
+  const email = session?.user?.email ?? null;
 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: 'assistant',
-      content:
-        "Hey — I'm SkillBot. I can explain how verification works, help you find verified peers in your college, or point you at the right page. What's up?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Hydrate from localStorage when the user becomes known. Wrapped in
+  // try/catch so a poisoned key doesn't crash the dashboard.
+  useEffect(() => {
+    const key = storageKey(email);
+    if (!key) return;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Msg[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setMessages(parsed);
+      }
+    } catch {
+      // ignore — fall back to greeting
+    }
+  }, [email]);
+
+  // Persist whenever messages change. Keep only the last MAX_PERSISTED
+  // turns so localStorage doesn't grow unbounded over months of chatting.
+  useEffect(() => {
+    const key = storageKey(email);
+    if (!key) return;
+    try {
+      const trimmed = messages.slice(-MAX_PERSISTED);
+      window.localStorage.setItem(key, JSON.stringify(trimmed));
+    } catch {
+      // quota exceeded — silently drop persistence
+    }
+  }, [messages, email]);
 
   useEffect(() => {
     if (open && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, open]);
+
+  function reset() {
+    setMessages([GREETING]);
+    const key = storageKey(email);
+    if (key) {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   async function send(text?: string) {
     const body = (text ?? draft).trim();
@@ -105,12 +157,22 @@ export function ChatWidget() {
               <div className="text-[10px] text-muted-foreground">AI · powered by OpenRouter</div>
             </div>
           </div>
-          <button
-            onClick={() => setOpen(false)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={reset}
+              className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-secondary"
+              title="Clear conversation"
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-muted-foreground hover:text-foreground p-1"
+              aria-label="Close chat"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable transcript */}

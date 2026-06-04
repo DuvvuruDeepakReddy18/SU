@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DEFAULT_SUBREDDITS } from '@skillverify/shared';
+import { CommunityMascot } from '@/components/community-mascot';
 
 type Author = {
   displayName: string;
@@ -189,163 +190,217 @@ export default function CommunityPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['community.posts'] }),
   });
 
+  // Quick stats summarized from the loaded feed — purely cosmetic in the hero.
+  const totalPosts = data?.total ?? 0;
+  const visibleSubs = allSubreddits.length;
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[200px_1fr] max-w-5xl mx-auto">
-      {/* ---------- LEFT RAIL: sub-communities ---------- */}
-      <aside className="space-y-2 lg:sticky lg:top-4 self-start">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground px-1">
-          Communities
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* ============ ORBIE HERO ============ */}
+      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-indigo-50 via-background to-purple-50 dark:from-indigo-950/40 dark:via-background dark:to-purple-950/40 p-6 md:p-8">
+        {/* Blurry rainbow accent strip */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 via-amber-400 via-emerald-500 via-blue-500 to-violet-500 opacity-70" />
+        <div className="absolute -bottom-24 -right-20 h-72 w-72 rounded-full bg-indigo-300/30 blur-3xl dark:bg-indigo-800/30" />
+
+        <div className="relative flex flex-col md:flex-row items-center md:items-start gap-6">
+          <div className="shrink-0 text-indigo-500 dark:text-indigo-300">
+            <CommunityMascot size={104} />
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-background/70 backdrop-blur border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider">
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+              Community · SkillVerify
+            </div>
+            <h1 className="mt-2 text-3xl md:text-4xl font-bold tracking-tight">
+              Welcome to your{' '}
+              <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent">
+                community
+              </span>
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground max-w-xl">
+              The web of student communities. Discuss freely, share anonymously, message your peers
+              — across institutes and within yours.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-4 justify-center md:justify-start text-xs">
+              <Stat n={totalPosts} label="posts in your feed" />
+              <Stat n={visibleSubs} label="active sub-communities" />
+              <Link
+                href="/dashboard/messages"
+                className="inline-flex items-center gap-1 rounded-full bg-foreground/90 hover:bg-foreground text-background px-3 py-1.5 font-medium transition"
+              >
+                <MessageCircle className="h-3 w-3" /> Open Messages
+              </Link>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={() => setActiveSub(null)}
-          className={cn(
-            'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary',
-            activeSub === null && 'bg-secondary font-medium',
-          )}
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <Hash className="h-3.5 w-3.5" /> All
-          </span>
-        </button>
-        {allSubreddits.map((s) => (
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
+        {/* ---------- LEFT RAIL: sub-communities ---------- */}
+        <aside className="space-y-2 lg:sticky lg:top-4 self-start">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground px-1">
+            Communities
+          </div>
           <button
-            key={s.slug}
-            onClick={() => setActiveSub(s.slug)}
+            onClick={() => setActiveSub(null)}
             className={cn(
               'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary',
-              activeSub === s.slug && 'bg-secondary font-medium',
+              activeSub === null && 'bg-secondary font-medium',
             )}
           >
             <span className="inline-flex items-center gap-1.5">
-              <Hash className="h-3.5 w-3.5" /> {s.slug}
+              <Hash className="h-3.5 w-3.5" /> All
             </span>
-            {s.count > 0 && (
-              <span className="text-[10px] text-muted-foreground tabular-nums">{s.count}</span>
-            )}
           </button>
-        ))}
-      </aside>
-
-      {/* ---------- MAIN FEED ---------- */}
-      <div className="space-y-5 min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h1 className="text-2xl font-semibold capitalize">
-              {activeSub ? `r/${activeSub}` : 'Community'}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Discuss, share, ask — across institutes and within yours.
-            </p>
-          </div>
-          <div className="inline-flex rounded-md border bg-secondary/30 p-1 text-sm">
+          {allSubreddits.map((s) => (
             <button
-              onClick={() => setScope('all')}
+              key={s.slug}
+              onClick={() => setActiveSub(s.slug)}
               className={cn(
-                'rounded px-3 py-1 transition',
-                scope === 'all' ? 'bg-background shadow-sm' : 'text-muted-foreground',
+                'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary',
+                activeSub === s.slug && 'bg-secondary font-medium',
               )}
             >
-              All
-            </button>
-            <button
-              onClick={() => setScope('mine')}
-              className={cn(
-                'rounded px-3 py-1 transition',
-                scope === 'mine' ? 'bg-background shadow-sm' : 'text-muted-foreground',
+              <span className="inline-flex items-center gap-1.5">
+                <Hash className="h-3.5 w-3.5" /> {s.slug}
+              </span>
+              {s.count > 0 && (
+                <span className="text-[10px] text-muted-foreground tabular-nums">{s.count}</span>
               )}
-            >
-              {profile?.user?.institution?.name ?? 'My institute'}
             </button>
-          </div>
-        </div>
-
-        {/* Composer */}
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={composerSub}
-                onChange={(e) => setComposerSub(e.target.value)}
-                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
-              >
-                {(DEFAULT_SUBREDDITS as readonly string[]).map((s) => (
-                  <option key={s} value={s}>
-                    r/{s}
-                  </option>
-                ))}
-              </select>
-              <Input
-                placeholder="Title (optional)"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                maxLength={200}
-                className="flex-1 min-w-[200px]"
-              />
-            </div>
-            <textarea
-              className="w-full min-h-[80px] resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder={
-                anon ? 'Share something anonymously…' : 'Share something with the community…'
-              }
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              maxLength={5000}
-            />
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={anon}
-                  onChange={(e) => setAnon(e.target.checked)}
-                  className="rounded"
-                />
-                Post anonymously
-              </label>
-              <Button
-                onClick={() => post.mutate()}
-                disabled={!body.trim() || post.isPending}
-                size="sm"
-              >
-                <Send className="h-4 w-4" /> {post.isPending ? 'Posting…' : 'Post'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sort tabs */}
-        <div className="flex gap-1 border-b">
-          <SortTab active={sort === 'hot'} onClick={() => setSort('hot')} icon={Flame}>
-            Hot
-          </SortTab>
-          <SortTab active={sort === 'new'} onClick={() => setSort('new')} icon={Clock}>
-            New
-          </SortTab>
-          <SortTab active={sort === 'top'} onClick={() => setSort('top')} icon={TrendingUp}>
-            Top
-          </SortTab>
-        </div>
-
-        {/* Feed */}
-        <div className="space-y-3">
-          {data?.items.length === 0 && (
-            <Card>
-              <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                No posts yet — be the first.
-              </CardContent>
-            </Card>
-          )}
-          {data?.items.map((p) => (
-            <PostCard
-              key={p.id}
-              post={p}
-              token={token}
-              onVote={(value) => vote.mutate({ id: p.id, value })}
-              onDelete={() => remove.mutate(p.id)}
-              onSubClick={(s) => setActiveSub(s)}
-            />
           ))}
+        </aside>
+
+        {/* ---------- MAIN FEED ---------- */}
+        <div className="space-y-5 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-semibold capitalize">
+                {activeSub ? `r/${activeSub}` : 'Community'}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Discuss, share, ask — across institutes and within yours.
+              </p>
+            </div>
+            <div className="inline-flex rounded-md border bg-secondary/30 p-1 text-sm">
+              <button
+                onClick={() => setScope('all')}
+                className={cn(
+                  'rounded px-3 py-1 transition',
+                  scope === 'all' ? 'bg-background shadow-sm' : 'text-muted-foreground',
+                )}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setScope('mine')}
+                className={cn(
+                  'rounded px-3 py-1 transition',
+                  scope === 'mine' ? 'bg-background shadow-sm' : 'text-muted-foreground',
+                )}
+              >
+                {profile?.user?.institution?.name ?? 'My institute'}
+              </button>
+            </div>
+          </div>
+
+          {/* Composer */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={composerSub}
+                  onChange={(e) => setComposerSub(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                >
+                  {(DEFAULT_SUBREDDITS as readonly string[]).map((s) => (
+                    <option key={s} value={s}>
+                      r/{s}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  placeholder="Title (optional)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  maxLength={200}
+                  className="flex-1 min-w-[200px]"
+                />
+              </div>
+              <textarea
+                className="w-full min-h-[80px] resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                placeholder={
+                  anon ? 'Share something anonymously…' : 'Share something with the community…'
+                }
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                maxLength={5000}
+              />
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={anon}
+                    onChange={(e) => setAnon(e.target.checked)}
+                    className="rounded"
+                  />
+                  Post anonymously
+                </label>
+                <Button
+                  onClick={() => post.mutate()}
+                  disabled={!body.trim() || post.isPending}
+                  size="sm"
+                >
+                  <Send className="h-4 w-4" /> {post.isPending ? 'Posting…' : 'Post'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sort tabs */}
+          <div className="flex gap-1 border-b">
+            <SortTab active={sort === 'hot'} onClick={() => setSort('hot')} icon={Flame}>
+              Hot
+            </SortTab>
+            <SortTab active={sort === 'new'} onClick={() => setSort('new')} icon={Clock}>
+              New
+            </SortTab>
+            <SortTab active={sort === 'top'} onClick={() => setSort('top')} icon={TrendingUp}>
+              Top
+            </SortTab>
+          </div>
+
+          {/* Feed */}
+          <div className="space-y-3">
+            {data?.items.length === 0 && (
+              <Card>
+                <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                  No posts yet — be the first.
+                </CardContent>
+              </Card>
+            )}
+            {data?.items.map((p) => (
+              <PostCard
+                key={p.id}
+                post={p}
+                token={token}
+                onVote={(value) => vote.mutate({ id: p.id, value })}
+                onDelete={() => remove.mutate(p.id)}
+                onSubClick={(s) => setActiveSub(s)}
+              />
+            ))}
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Stat({ n, label }: { n: number; label: string }) {
+  return (
+    <div className="inline-flex items-baseline gap-1 text-muted-foreground">
+      <span className="font-semibold text-foreground tabular-nums">{n}</span>
+      <span>{label}</span>
     </div>
   );
 }

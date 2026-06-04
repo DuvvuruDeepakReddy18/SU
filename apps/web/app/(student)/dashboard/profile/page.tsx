@@ -22,8 +22,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 import { PROFILE_LINK_HOSTS } from '@skillverify/shared';
+import { ProfileTabs } from '@/components/profile-tabs';
 
 type Profile = {
   fullName: string;
@@ -120,7 +121,7 @@ export default function ProfilePage() {
     fd.append('file', file);
     const tid = toast.loading('Uploading and reading your resume with AI…');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/profile/resume`, {
+      const res = await fetch(`${API_BASE}/profile/resume`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -150,17 +151,14 @@ export default function ProfilePage() {
     setJustParsed(null);
     const tid = toast.loading('Reading your resume with AI…');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/profile/resume-text`, {
+      // JSON body → use the shared api() helper (handles base URL, auth,
+      // content-type, and error throwing).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await api<{ parsed: any }>('/profile/resume-text', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        token,
         body: JSON.stringify({ text }),
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt.slice(0, 300));
-      }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = (await res.json()) as { parsed: any };
       setJustParsed(summarizeParsed(data.parsed));
       toast.success('Your profile has been filled in', { id: tid });
       qc.invalidateQueries({ queryKey: ['profile.me'] });
@@ -174,7 +172,7 @@ export default function ProfilePage() {
   async function onAvatar(file: File) {
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/profile/avatar`, {
+    const res = await fetch(`${API_BASE}/profile/avatar`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: fd,
@@ -223,14 +221,17 @@ export default function ProfilePage() {
   // --- Onboarding hero — no resume yet ---
   if (!hasResume && !editing && !justParsed) {
     return (
-      <div className="max-w-3xl">
-        <UploadHero
-          parsing={parsing}
-          storageEnabled={storageEnabled}
-          onFile={onResume}
-          onText={onResumeText}
-          onSkip={() => setEditing(true)}
-        />
+      <div className="space-y-4">
+        <ProfileTabs />
+        <div className="max-w-3xl">
+          <UploadHero
+            parsing={parsing}
+            storageEnabled={storageEnabled}
+            onFile={onResume}
+            onText={onResumeText}
+            onSkip={() => setEditing(true)}
+          />
+        </div>
       </div>
     );
   }
@@ -238,224 +239,76 @@ export default function ProfilePage() {
   // --- Edit mode (the original form) ---
   if (editing) {
     return (
-      <div className="max-w-3xl space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Edit profile</h2>
-          <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-            Done editing
-          </Button>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Public profile</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Row label="Full name">
-              <Input
-                value={form.fullName ?? ''}
-                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              />
-            </Row>
-            <Row label="Headline">
-              <Input
-                value={form.headline ?? ''}
-                onChange={(e) => setForm({ ...form, headline: e.target.value })}
-                placeholder="e.g. CS undergrad @ IIT, ML enthusiast"
-              />
-            </Row>
-            <Row label="Bio">
-              <textarea
-                className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                value={form.bio ?? ''}
-                onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              />
-            </Row>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Row label="Phone">
-                <Input
-                  value={form.phone ?? ''}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </Row>
-              <Row label="Location">
-                <Input
-                  value={form.location ?? ''}
-                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-                />
-              </Row>
-              <Row label="CGPA">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.cgpa ?? ''}
-                  onChange={(e) =>
-                    setForm({ ...form, cgpa: e.target.value ? Number(e.target.value) : null })
-                  }
-                />
-              </Row>
-              <Row label="Graduation year">
-                <Input
-                  type="number"
-                  value={form.graduationYear ?? ''}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      graduationYear: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                />
-              </Row>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Links</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <LinkRow
-              icon={Linkedin}
-              label="LinkedIn"
-              value={form.linkedinUrl}
-              onChange={(v) => setForm({ ...form, linkedinUrl: v })}
-              placeholder="https://linkedin.com/in/…"
-              allowedHosts={[...PROFILE_LINK_HOSTS.linkedin]}
-            />
-            <LinkRow
-              icon={Github}
-              label="GitHub"
-              value={form.githubUrl}
-              onChange={(v) => setForm({ ...form, githubUrl: v })}
-              placeholder="https://github.com/…"
-              allowedHosts={[...PROFILE_LINK_HOSTS.github]}
-            />
-            <LinkRow
-              icon={Code2}
-              label="LeetCode"
-              value={form.leetcodeUrl}
-              onChange={(v) => setForm({ ...form, leetcodeUrl: v })}
-              placeholder="https://leetcode.com/…"
-              allowedHosts={[...PROFILE_LINK_HOSTS.leetcode]}
-            />
-            <LinkRow
-              icon={Trophy}
-              label="CodeChef"
-              value={form.codechefUrl}
-              onChange={(v) => setForm({ ...form, codechefUrl: v })}
-              placeholder="https://codechef.com/users/…"
-              allowedHosts={[...PROFILE_LINK_HOSTS.codechef]}
-            />
-            <LinkRow
-              icon={Globe}
-              label="Portfolio"
-              value={form.portfolioUrl}
-              onChange={(v) => setForm({ ...form, portfolioUrl: v })}
-              placeholder="https://yoursite.com"
-            />
-          </CardContent>
-        </Card>
-
-        {storageEnabled && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Avatar</CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center gap-4">
-              {profile.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  className="h-16 w-16 rounded-full object-cover"
-                  alt=""
-                />
-              ) : (
-                <div className="h-16 w-16 rounded-full bg-secondary" />
-              )}
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => e.target.files?.[0] && onAvatar(e.target.files[0])}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="flex gap-2">
-          <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
-            {update.isPending ? 'Saving…' : 'Save changes'}
-          </Button>
-          <Button variant="outline" onClick={() => setEditing(false)}>
-            Cancel
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // --- Review mode (resume uploaded — read-only summary + PDF preview) ---
-  return (
-    <div className="max-w-6xl space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">Your profile</h2>
-          <p className="text-sm text-muted-foreground">
-            Filled in from your resume. Review and tweak when you have a minute.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {storageEnabled && (
-            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-              <Upload className="h-4 w-4" /> Re-upload resume
+      <div className="space-y-4">
+        <ProfileTabs />
+        <div className="max-w-3xl space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Edit profile</h2>
+            <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+              Done editing
             </Button>
-          )}
-          <Button size="sm" onClick={() => setEditing(true)}>
-            <Pencil className="h-4 w-4" /> Edit
-          </Button>
-        </div>
-      </div>
+          </div>
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="application/pdf"
-        hidden
-        onChange={(e) => e.target.files?.[0] && onResume(e.target.files[0])}
-      />
-
-      {parsing && (
-        <Card>
-          <CardContent className="flex items-center gap-3 py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span className="text-sm">Reading your resume with AI…</span>
-          </CardContent>
-        </Card>
-      )}
-
-      {justParsed && !parsing && <ParsedSummary fields={justParsed} />}
-
-      {/* Two-column layout: parsed details on the left, PDF preview pinned right.
-          Falls back to single column on mobile (lg breakpoint = 1024px). */}
-      <div className={profile.resumeUrl ? 'grid gap-6 lg:grid-cols-[1fr_440px]' : ''}>
-        <div className="space-y-6 min-w-0">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" /> About
-              </CardTitle>
+              <CardTitle>Public profile</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <ReadField label="Name" value={profile.fullName} />
-              <ReadField label="Headline" value={profile.headline} />
-              <ReadField label="Bio" value={profile.bio} multiline />
-              <div className="grid gap-3 md:grid-cols-2">
-                <ReadField label="Phone" value={profile.phone} />
-                <ReadField label="Location" value={profile.location} />
-                <ReadField label="CGPA" value={profile.cgpa?.toFixed(2) ?? null} />
-                <ReadField
-                  label="Graduation year"
-                  value={profile.graduationYear?.toString() ?? null}
+            <CardContent className="space-y-4">
+              <Row label="Full name">
+                <Input
+                  value={form.fullName ?? ''}
+                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                 />
+              </Row>
+              <Row label="Headline">
+                <Input
+                  value={form.headline ?? ''}
+                  onChange={(e) => setForm({ ...form, headline: e.target.value })}
+                  placeholder="e.g. CS undergrad @ IIT, ML enthusiast"
+                />
+              </Row>
+              <Row label="Bio">
+                <textarea
+                  className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                  value={form.bio ?? ''}
+                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                />
+              </Row>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Row label="Phone">
+                  <Input
+                    value={form.phone ?? ''}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </Row>
+                <Row label="Location">
+                  <Input
+                    value={form.location ?? ''}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  />
+                </Row>
+                <Row label="CGPA">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={form.cgpa ?? ''}
+                    onChange={(e) =>
+                      setForm({ ...form, cgpa: e.target.value ? Number(e.target.value) : null })
+                    }
+                  />
+                </Row>
+                <Row label="Graduation year">
+                  <Input
+                    type="number"
+                    value={form.graduationYear ?? ''}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        graduationYear: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                  />
+                </Row>
               </div>
             </CardContent>
           </Card>
@@ -464,17 +317,171 @@ export default function ProfilePage() {
             <CardHeader>
               <CardTitle>Links</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-2 md:grid-cols-2 text-sm">
-              <ReadLink icon={Linkedin} label="LinkedIn" url={profile.linkedinUrl} />
-              <ReadLink icon={Github} label="GitHub" url={profile.githubUrl} />
-              <ReadLink icon={Code2} label="LeetCode" url={profile.leetcodeUrl} />
-              <ReadLink icon={Trophy} label="CodeChef" url={profile.codechefUrl} />
-              <ReadLink icon={Globe} label="Portfolio" url={profile.portfolioUrl} />
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <LinkRow
+                icon={Linkedin}
+                label="LinkedIn"
+                value={form.linkedinUrl}
+                onChange={(v) => setForm({ ...form, linkedinUrl: v })}
+                placeholder="https://linkedin.com/in/…"
+                allowedHosts={[...PROFILE_LINK_HOSTS.linkedin]}
+              />
+              <LinkRow
+                icon={Github}
+                label="GitHub"
+                value={form.githubUrl}
+                onChange={(v) => setForm({ ...form, githubUrl: v })}
+                placeholder="https://github.com/…"
+                allowedHosts={[...PROFILE_LINK_HOSTS.github]}
+              />
+              <LinkRow
+                icon={Code2}
+                label="LeetCode"
+                value={form.leetcodeUrl}
+                onChange={(v) => setForm({ ...form, leetcodeUrl: v })}
+                placeholder="https://leetcode.com/…"
+                allowedHosts={[...PROFILE_LINK_HOSTS.leetcode]}
+              />
+              <LinkRow
+                icon={Trophy}
+                label="CodeChef"
+                value={form.codechefUrl}
+                onChange={(v) => setForm({ ...form, codechefUrl: v })}
+                placeholder="https://codechef.com/users/…"
+                allowedHosts={[...PROFILE_LINK_HOSTS.codechef]}
+              />
+              <LinkRow
+                icon={Globe}
+                label="Portfolio"
+                value={form.portfolioUrl}
+                onChange={(v) => setForm({ ...form, portfolioUrl: v })}
+                placeholder="https://yoursite.com"
+              />
             </CardContent>
           </Card>
+
+          {storageEnabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Avatar</CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-center gap-4">
+                {profile.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    className="h-16 w-16 rounded-full object-cover"
+                    alt=""
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-full bg-secondary" />
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => e.target.files?.[0] && onAvatar(e.target.files[0])}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex gap-2">
+            <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
+              {update.isPending ? 'Saving…' : 'Save changes'}
+            </Button>
+            <Button variant="outline" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Review mode (resume uploaded — read-only summary + PDF preview) ---
+  return (
+    <div className="space-y-4">
+      <ProfileTabs />
+      <div className="max-w-6xl space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Your profile</h2>
+            <p className="text-sm text-muted-foreground">
+              Filled in from your resume. Review and tweak when you have a minute.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {storageEnabled && (
+              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                <Upload className="h-4 w-4" /> Re-upload resume
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setEditing(true)}>
+              <Pencil className="h-4 w-4" /> Edit
+            </Button>
+          </div>
         </div>
 
-        {profile.resumeUrl && <ResumePreview url={profile.resumeUrl} />}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf"
+          hidden
+          onChange={(e) => e.target.files?.[0] && onResume(e.target.files[0])}
+        />
+
+        {parsing && (
+          <Card>
+            <CardContent className="flex items-center gap-3 py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm">Reading your resume with AI…</span>
+            </CardContent>
+          </Card>
+        )}
+
+        {justParsed && !parsing && <ParsedSummary fields={justParsed} />}
+
+        {/* Two-column layout: parsed details on the left, PDF preview pinned right.
+          Falls back to single column on mobile (lg breakpoint = 1024px). */}
+        <div className={profile.resumeUrl ? 'grid gap-6 lg:grid-cols-[1fr_440px]' : ''}>
+          <div className="space-y-6 min-w-0">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" /> About
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <ReadField label="Name" value={profile.fullName} />
+                <ReadField label="Headline" value={profile.headline} />
+                <ReadField label="Bio" value={profile.bio} multiline />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <ReadField label="Phone" value={profile.phone} />
+                  <ReadField label="Location" value={profile.location} />
+                  <ReadField label="CGPA" value={profile.cgpa?.toFixed(2) ?? null} />
+                  <ReadField
+                    label="Graduation year"
+                    value={profile.graduationYear?.toString() ?? null}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Links</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-2 md:grid-cols-2 text-sm">
+                <ReadLink icon={Linkedin} label="LinkedIn" url={profile.linkedinUrl} />
+                <ReadLink icon={Github} label="GitHub" url={profile.githubUrl} />
+                <ReadLink icon={Code2} label="LeetCode" url={profile.leetcodeUrl} />
+                <ReadLink icon={Trophy} label="CodeChef" url={profile.codechefUrl} />
+                <ReadLink icon={Globe} label="Portfolio" url={profile.portfolioUrl} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {profile.resumeUrl && <ResumePreview url={profile.resumeUrl} />}
+        </div>
       </div>
     </div>
   );

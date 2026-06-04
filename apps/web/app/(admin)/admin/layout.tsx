@@ -19,6 +19,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/institutions" className="hover:text-primary">
               Institutions
             </Link>
+            <Link href="/admin/recruiters" className="hover:text-primary">
+              Recruiters
+            </Link>
+            <Link href="/admin/institution-admins" className="hover:text-primary">
+              Institution admins
+            </Link>
+            <Link href="/admin/interviewers" className="hover:text-primary">
+              Interviewers
+            </Link>
             <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
               ← Student app
             </Link>
