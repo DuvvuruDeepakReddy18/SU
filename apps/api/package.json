@@ -10,6 +10,8 @@
     "migrate:deploy": "pnpm --filter @skillverify/db migrate:deploy",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "dotenv -e ../../.env -- vitest run --config vitest.e2e.config.ts",
+    "test:e2e:ci": "vitest run --config vitest.e2e.config.ts",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit"
   },
@@ -25,6 +27,7 @@
     "@nestjs/schedule": "^4.1.2",
     "@nestjs/throttler": "^6.3.0",
     "@prisma/client": "^5.22.0",
+    "@sentry/node": "^10.55.0",
     "@skillverify/db": "workspace:*",
     "@skillverify/shared": "workspace:*",
     "bcryptjs": "^3.0.3",
@@ -45,7 +48,7 @@
     "pino-http": "^10.3.0",
     "razorpay": "^2.9.6",
     "reflect-metadata": "^0.2.2",
-    "resend": "^4.0.1",
+    "resend": "^4.8.0",
     "rxjs": "^7.8.1",
     "zod": "^3.24.1"
   },
@@ -60,8 +63,11 @@
     "@types/node": "^22.10.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/pdf-parse": "^1.1.4",
+    "@types/supertest": "^7.2.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.22.3",
     "typescript": "^5.7.2",
+    "unplugin-swc": "^1.5.9",
     "vitest": "^2.1.8"
   }
 }

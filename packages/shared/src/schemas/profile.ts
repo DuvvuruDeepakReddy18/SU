@@ -98,6 +98,8 @@ export const UpdateProfileSchema = z.object({
     .min(1)
     .max(4)
     .optional(),
+  // Onboarding wizard progress (0..4). The wizard component itself bumps this.
+  onboardingStep: z.number().int().min(0).max(4).optional(),
 });
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
 

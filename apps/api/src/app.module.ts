@@ -8,6 +8,7 @@ import { RedisModule } from './infra/redis/redis.module';
 import { StorageModule } from './infra/storage/storage.module';
 import { QueueModule } from './infra/queue/queue.module';
 import { OpenRouterModule } from './infra/openrouter/openrouter.module';
+import { EmailModule } from './infra/email/email.module';
 import { HealthController } from './common/health.controller';
 
 import { AuthModule } from './modules/auth/auth.module';
@@ -27,6 +28,10 @@ import { FreelanceModule } from './modules/freelance/freelance.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { MessagesModule } from './modules/messages/messages.module';
+import { RecruitersModule } from './modules/recruiters/recruiters.module';
+import { InstitutionAdminModule } from './modules/institution-admin/institution-admin.module';
+import { InterviewerModule } from './modules/interviewer/interviewer.module';
 
 @Module({
   imports: [
@@ -38,6 +43,7 @@ import { ChatModule } from './modules/chat/chat.module';
     StorageModule,
     QueueModule,
     OpenRouterModule,
+    EmailModule,
     AuthModule,
     ProfileModule,
     SkillsModule,
@@ -55,6 +61,10 @@ import { ChatModule } from './modules/chat/chat.module';
     InstitutionsModule,
     AdminModule,
     ChatModule,
+    MessagesModule,
+    RecruitersModule,
+    InstitutionAdminModule,
+    InterviewerModule,
   ],
   controllers: [HealthController],
 })

@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
+import type { RejectionReason } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { OpenRouterClient } from '../../infra/openrouter/openrouter.client';
+import { EmailService } from '../../infra/email/email.service';
+import { StorageService } from '../../infra/storage/storage.service';
 
 const VISION_MODELS = [
   // Free vision models on OpenRouter, in fallback order. The list is brittle
@@ -26,6 +29,8 @@ export class CollegeIdService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly openrouter: OpenRouterClient,
+    private readonly email: EmailService,
+    private readonly storage: StorageService,
   ) {}
 
   /**
@@ -119,37 +124,72 @@ If any field cannot be determined, use null. Be conservative with confidence.`;
   }
 
   /**
-   * Admin actions — manual override of the screen outcome.
+   * Admin actions — manual override of the screen outcome. These intentionally
+   * return the updated row so the caller (admin controller) can write the
+   * audit trail with the new state.
    */
-  async approve(profileUserId: string): Promise<void> {
-    await this.prisma.studentProfile.update({
+  async approve(profileUserId: string) {
+    const before = await this.prisma.studentProfile.findUnique({
+      where: { userId: profileUserId },
+      select: { collegeIdStatus: true, collegeIdRejectionReasonCode: true },
+    });
+    const updated = await this.prisma.studentProfile.update({
       where: { userId: profileUserId },
       data: {
         collegeIdStatus: 'verified',
         collegeIdVerifiedAt: new Date(),
         collegeIdRejectionReason: null,
+        collegeIdRejectionReasonCode: null,
       },
+      include: { user: { select: { email: true } } },
     });
+    void this.email.sendCollegeIdApproved(
+      updated.user.email,
+      updated.governmentName ?? updated.fullName,
+    );
+    return { before, updated };
   }
 
-  async reject(profileUserId: string, reason: string): Promise<void> {
-    await this.prisma.studentProfile.update({
+  async reject(profileUserId: string, reasonCode: string, reasonNote?: string | null) {
+    const before = await this.prisma.studentProfile.findUnique({
+      where: { userId: profileUserId },
+      select: { collegeIdStatus: true, collegeIdRejectionReasonCode: true },
+    });
+    const updated = await this.prisma.studentProfile.update({
       where: { userId: profileUserId },
       data: {
         collegeIdStatus: 'rejected',
         collegeIdVerifiedAt: null,
-        collegeIdRejectionReason: reason,
+        collegeIdRejectionReasonCode: reasonCode,
+        collegeIdRejectionReason: reasonNote ?? null,
       },
+      include: { user: { select: { email: true } } },
     });
+    void this.email.sendCollegeIdRejected(
+      updated.user.email,
+      updated.governmentName ?? updated.fullName,
+      reasonCode as RejectionReason,
+      reasonNote ?? null,
+    );
+    return { before, updated };
   }
 
   async listPending(limit = 50) {
-    return this.prisma.studentProfile.findMany({
+    const rows = await this.prisma.studentProfile.findMany({
       where: { collegeIdStatus: 'pending_review' },
       take: limit,
       orderBy: { collegeIdUploadedAt: 'desc' },
       include: { user: { select: { email: true, institution: { select: { name: true } } } } },
     });
+    // Swap each permanent S3 URL for a 10-minute signed URL. Admins are
+    // trusted but their browser tabs / network logs / screenshots are not —
+    // and once a public URL leaks, the PII is on the open internet forever.
+    return Promise.all(
+      rows.map(async (r) => ({
+        ...r,
+        collegeIdUrl: await this.storage.signedDownloadFor(r.collegeIdUrl),
+      })),
+    );
   }
 
   private async fetchAsDataUrl(url: string): Promise<string> {

@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CertificationTier } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { StorageService } from '../../infra/storage/storage.service';
 import { LayerEngine } from './layer-engine';
 import type {
   AcademicRecordCreateDto,
@@ -14,6 +15,7 @@ export class VerificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly engine: LayerEngine,
+    private readonly storage: StorageService,
   ) {}
 
   async addAcademic(userId: string, dto: AcademicRecordCreateDto) {
@@ -80,7 +82,15 @@ export class VerificationsService {
       this.prisma.academicRecord.findMany({ where: { userId } }),
       this.prisma.project.findMany({ where: { userId } }),
     ]);
-    return { skills, certs, academic, projects };
+    // Sign the owner's own marksheet URLs too so the persistent S3 URL
+    // never crosses the API boundary.
+    const academicSigned = await Promise.all(
+      academic.map(async (r) => ({
+        ...r,
+        docUrl: await this.storage.signedDownloadFor(r.docUrl),
+      })),
+    );
+    return { skills, certs, academic: academicSigned, projects };
   }
 
   async createProject(userId: string, dto: ProjectCreateDto) {
@@ -177,5 +187,32 @@ export class VerificationsService {
         skills: { verified: skillsVerified, total: skills.length },
       },
     };
+  }
+
+  /**
+   * Returns the student's position in the college-ID review queue (1 = next
+   * up), plus the total queue length, for the SLA messaging on the dashboard.
+   *
+   * Returns `position: null` when the student doesn't have a pending review
+   * (already verified, rejected, or never uploaded).
+   */
+  async myCollegeIdQueuePosition(userId: string) {
+    const me = await this.prisma.studentProfile.findUnique({
+      where: { userId },
+      select: { collegeIdStatus: true, collegeIdUploadedAt: true },
+    });
+    if (me?.collegeIdStatus !== 'pending_review' || !me.collegeIdUploadedAt) {
+      return { position: null, queueLength: 0 };
+    }
+    const [ahead, queueLength] = await Promise.all([
+      this.prisma.studentProfile.count({
+        where: {
+          collegeIdStatus: 'pending_review',
+          collegeIdUploadedAt: { lt: me.collegeIdUploadedAt },
+        },
+      }),
+      this.prisma.studentProfile.count({ where: { collegeIdStatus: 'pending_review' } }),
+    ]);
+    return { position: ahead + 1, queueLength };
   }
 }

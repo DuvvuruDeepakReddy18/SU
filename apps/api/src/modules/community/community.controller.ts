@@ -9,11 +9,13 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { CommunityService } from './community.service';
 import { CommunityPostCreateDto, CommunityCommentCreateDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { IdempotencyInterceptor } from '../../common/interceptors/idempotency.interceptor';
 import type { JwtPayload } from '@skillverify/shared';
 
 @Controller('community/posts')
@@ -46,6 +48,7 @@ export class CommunityController {
   }
 
   @Post()
+  @UseInterceptors(IdempotencyInterceptor)
   create(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: CommunityPostCreateDto) {
     return this.svc.create(u.sub, dto);
   }
@@ -81,6 +84,7 @@ export class CommunityController {
   }
 
   @Post(':id/comments')
+  @UseInterceptors(IdempotencyInterceptor)
   addComment(
     @CurrentUser() u: JwtPayload,
     @Param('id') id: string,

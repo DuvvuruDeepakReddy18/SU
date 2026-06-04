@@ -1,5 +1,5 @@
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
-import { Queue, type QueueOptions } from 'bullmq';
+import { Queue, type JobsOptions, type QueueOptions } from 'bullmq';
 import { RedisService } from '../redis/redis.service';
 import { QUEUE_NAMES, type QueueName } from './queue.constants';
 
@@ -30,6 +30,15 @@ export class QueueService implements OnModuleDestroy {
 
   async add<T>(name: QueueName, payload: T, jobId?: string) {
     return this.get(name).add(name, payload, jobId ? { jobId } : undefined);
+  }
+
+  /**
+   * Like `add` but lets the caller specify the job name independently from
+   * the queue name. Use this when a single queue dispatches multiple kinds
+   * of work (see VERIFICATION_SCREEN for the canonical example).
+   */
+  async addNamed<T>(queueName: QueueName, jobName: string, payload: T, options?: JobsOptions) {
+    return this.get(queueName).add(jobName, payload, options);
   }
 
   async onModuleDestroy() {

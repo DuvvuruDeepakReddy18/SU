@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Post,
@@ -11,7 +12,13 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AuthService } from './auth.service';
-import { SignupDto, LoginDto, OAuthSyncDto } from './dto';
+import {
+  SignupDto,
+  LoginDto,
+  OAuthSyncDto,
+  RecruiterSignupDto,
+  InstitutionAdminSignupDto,
+} from './dto';
 import { StorageService } from '../../infra/storage/storage.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -28,6 +35,22 @@ export class AuthController {
   @Post('signup')
   signup(@Body(ZodValidationPipe) dto: SignupDto) {
     return this.auth.signup(dto);
+  }
+
+  // Recruiter self-signup (separate from student signup). Creates a pending
+  // RECRUITER account; no candidate-search access until an admin approves.
+  @Public()
+  @Post('company/signup')
+  signupRecruiter(@Body(ZodValidationPipe) dto: RecruiterSignupDto) {
+    return this.auth.signupRecruiter(dto);
+  }
+
+  // Institution / TPO request-access signup. Creates a pending
+  // INSTITUTION_ADMIN account; no roster access until an admin approves.
+  @Public()
+  @Post('institution/signup')
+  signupInstitutionAdmin(@Body(ZodValidationPipe) dto: InstitutionAdminSignupDto) {
+    return this.auth.signupInstitutionAdmin(dto);
   }
 
   // Public upload endpoint used by the signup form before the user has an
@@ -74,5 +97,12 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: JwtPayload) {
     return this.auth.me(user.sub);
+  }
+
+  // Self-serve account closure. Soft-delete only — see auth.service for why.
+  @Delete('me')
+  @HttpCode(204)
+  async deleteMe(@CurrentUser() user: JwtPayload) {
+    await this.auth.softDeleteAccount(user.sub);
   }
 }

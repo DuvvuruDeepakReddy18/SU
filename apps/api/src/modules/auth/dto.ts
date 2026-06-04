@@ -1,9 +1,16 @@
 import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
-import { SignupSchema, LoginSchema } from '@skillverify/shared';
+import {
+  SignupSchema,
+  LoginSchema,
+  RecruiterSignupSchema,
+  InstitutionAdminSignupSchema,
+} from '@skillverify/shared';
 
 export class SignupDto extends createZodDto(SignupSchema) {}
 export class LoginDto extends createZodDto(LoginSchema) {}
+export class RecruiterSignupDto extends createZodDto(RecruiterSignupSchema) {}
+export class InstitutionAdminSignupDto extends createZodDto(InstitutionAdminSignupSchema) {}
 
 export const OAuthSyncSchema = z.object({
   email: z.string().email(),

@@ -47,4 +47,14 @@ describe('LayerEngine', () => {
     const engine = new LayerEngine(mockPrisma({ academic: 1, cert: 1, project: 1 }));
     expect(await engine.recomputeForUserSkill('us_1')).toBe(VerificationLayer.L3_PROVEN);
   });
+
+  it('never downgrades an interview-granted L4 (L4 floor)', async () => {
+    // A skill already at L4 (awarded by passing an expert interview) must NOT
+    // be recomputed back down even when the evidence would compute to L0.
+    const prisma = mockPrisma({ academic: 0, currentLayer: VerificationLayer.L4_EXPERT });
+    const engine = new LayerEngine(prisma);
+    expect(await engine.recomputeForUserSkill('us_1')).toBe(VerificationLayer.L4_EXPERT);
+    // And it must not have written a downgrade.
+    expect(prisma.userSkill.update).not.toHaveBeenCalled();
+  });
 });

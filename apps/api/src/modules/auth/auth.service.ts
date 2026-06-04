@@ -7,10 +7,17 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import type { User, UserRole } from '@prisma/client';
-import type { JwtPayload, SignupInput } from '@skillverify/shared';
+import type {
+  JwtPayload,
+  SignupInput,
+  RecruiterSignupInput,
+  InstitutionAdminSignupInput,
+} from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { StorageService } from '../../infra/storage/storage.service';
-import { CollegeIdService } from '../verifications/college-id.service';
+import { QueueService } from '../../infra/queue/queue.service';
+import { QUEUE_NAMES, VERIFICATION_JOBS } from '../../infra/queue/queue.constants';
+import { EmailService } from '../../infra/email/email.service';
 import type { OAuthSyncDto } from './dto';
 
 @Injectable()
@@ -19,7 +26,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly storage: StorageService,
-    private readonly collegeId: CollegeIdService,
+    private readonly queue: QueueService,
+    private readonly email: EmailService,
   ) {}
 
   async signup(input: SignupInput) {
@@ -82,16 +90,113 @@ export class AuthService {
       },
     });
 
-    // Fire-and-forget AI pre-screen. May flip status to 'verified' if the
-    // OCR cleanly matches name + institution and the image isn't edited.
-    void this.collegeId.screen(user.id);
+    // Enqueue AI pre-screen — never blocks the signup HTTP response. Worker
+    // picks it up and may flip collegeIdStatus to 'verified' if OCR cleanly
+    // matches name + institution and the image isn't edited.
+    await this.queue.addNamed(
+      QUEUE_NAMES.VERIFICATION_SCREEN,
+      VERIFICATION_JOBS.SCREEN_COLLEGE_ID,
+      { userId: user.id },
+      // jobId keyed by user means re-uploads dedupe naturally (latest queued
+      // wins). Note: BullMQ forbids ':' in custom job ids, so use '-'.
+      { jobId: `screen-college-id-${user.id}` },
+    );
+
+    // Welcome email — fire-and-forget; EmailService swallows its own errors,
+    // so a Resend outage never breaks signup.
+    void this.email.sendWelcome(user.email, input.governmentName);
+
+    return this.issueTokens(user);
+  }
+
+  /**
+   * Recruiter self-signup. Creates a RECRUITER user + their Employer +
+   * a RecruiterProfile in 'pending' state (no candidate-search access until an
+   * admin approves). One recruiter per company in v1.
+   */
+  async signupRecruiter(input: RecruiterSignupInput) {
+    const existing = await this.prisma.user.findUnique({ where: { email: input.email } });
+    if (existing) throw new ConflictException('Email already registered');
+
+    const passwordHash = await bcrypt.hash(input.password, 10);
+    // Derive a company email domain from the recruiter's login email when it's
+    // not a free provider — a soft trust signal for the approval queue.
+    const domain = deriveCompanyDomain(input.email);
+
+    // User → Employer → RecruiterProfile, atomically.
+    const user = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: { email: input.email, passwordHash, role: 'RECRUITER' },
+      });
+      const employer = await tx.employer.create({
+        data: {
+          name: input.companyName,
+          website: input.website ?? null,
+          // domain is unique-when-set; collisions (two recruiters, same company
+          // domain) shouldn't block signup, so only set it when free.
+          domain: domain && !(await tx.employer.findUnique({ where: { domain } })) ? domain : null,
+          createdById: u.id,
+        },
+      });
+      await tx.recruiterProfile.create({
+        data: {
+          userId: u.id,
+          employerId: employer.id,
+          fullName: input.fullName,
+          title: input.title ?? null,
+          status: 'pending',
+        },
+      });
+      return u;
+    });
+
+    return this.issueTokens(user);
+  }
+
+  /**
+   * Institution / TPO admin request-access signup. Creates an
+   * INSTITUTION_ADMIN user + a pending InstitutionAdminProfile bound to an
+   * existing institution. No roster access until an admin approves.
+   */
+  async signupInstitutionAdmin(input: InstitutionAdminSignupInput) {
+    const existing = await this.prisma.user.findUnique({ where: { email: input.email } });
+    if (existing) throw new ConflictException('Email already registered');
+
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: input.institutionId },
+    });
+    if (!institution) throw new BadRequestException('Selected institution does not exist.');
+
+    const passwordHash = await bcrypt.hash(input.password, 10);
+    const user = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          email: input.email,
+          passwordHash,
+          role: 'INSTITUTION_ADMIN',
+          institutionId: institution.id,
+        },
+      });
+      await tx.institutionAdminProfile.create({
+        data: {
+          userId: u.id,
+          institutionId: institution.id,
+          fullName: input.fullName,
+          title: input.title ?? null,
+          status: 'pending',
+        },
+      });
+      return u;
+    });
 
     return this.issueTokens(user);
   }
 
   async login(input: { email: string; password: string }) {
     const user = await this.prisma.user.findUnique({ where: { email: input.email } });
-    if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
+    if (!user || !user.passwordHash || user.deletedAt) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
     const ok = await bcrypt.compare(input.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
     return this.issueTokens(user);
@@ -99,6 +204,12 @@ export class AuthService {
 
   async syncOAuthUser(input: OAuthSyncDto) {
     let user = await this.prisma.user.findUnique({ where: { email: input.email } });
+    if (user?.deletedAt) {
+      // Refuse to re-activate a deleted account via OAuth — the user must
+      // sign up fresh (anonymized email collisions are impossible because
+      // the email was rewritten on delete).
+      throw new UnauthorizedException('This account is no longer active.');
+    }
     if (!user) {
       const institution = await this.resolveInstitution(input.email);
       if (!institution) {
@@ -128,10 +239,52 @@ export class AuthService {
   }
 
   async me(userId: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { studentProfile: true, institution: true },
     });
+    if (user?.deletedAt) return null;
+    return user;
+  }
+
+  /**
+   * Soft-delete a user. The row stays so their authored content
+   * (comments, applications) doesn't break threads; identifying fields are
+   * scrubbed and `deletedAt` is set. Login and OAuth paths refuse the
+   * row from now on; any live JWT becomes effectively unusable on next
+   * `me()` call because we return `null`.
+   *
+   * Email is rewritten to a sentinel address to free the unique constraint
+   * if the same human ever wants to sign up fresh later.
+   */
+  async softDeleteAccount(userId: string) {
+    const sentinelEmail = `deleted+${userId}@skillverify.invalid`;
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: new Date(),
+          email: sentinelEmail,
+          passwordHash: null,
+        },
+      }),
+      this.prisma.studentProfile.updateMany({
+        where: { userId },
+        data: {
+          fullName: 'Deleted account',
+          governmentName: null,
+          phoneNumber: null,
+          instituteEmail: null,
+          headline: null,
+          bio: null,
+          avatarUrl: null,
+          collegeIdUrl: null,
+          resumeUrl: null,
+          isPublic: false,
+        },
+      }),
+    ]);
+    return { ok: true };
   }
 
   private issueTokens(user: User) {
@@ -175,4 +328,26 @@ export class AuthService {
       candidate = `${base}-${suffix}`;
     }
   }
+}
+
+// Free email providers — a recruiter signing up with one of these doesn't get
+// a company domain recorded (it's not a trust signal).
+const FREE_EMAIL_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'outlook.com',
+  'hotmail.com',
+  'live.com',
+  'yahoo.com',
+  'yahoo.co.in',
+  'icloud.com',
+  'proton.me',
+  'protonmail.com',
+  'rediffmail.com',
+]);
+
+function deriveCompanyDomain(email: string): string | null {
+  const domain = email.split('@')[1]?.toLowerCase();
+  if (!domain || FREE_EMAIL_DOMAINS.has(domain)) return null;
+  return domain;
 }

@@ -16,6 +16,7 @@
     "db:migrate": "pnpm --filter @skillverify/db migrate",
     "db:seed": "pnpm --filter @skillverify/db seed",
     "db:studio": "pnpm --filter @skillverify/db studio",
+    "make:admin": "dotenv -e .env -- tsx apps/api/scripts/make-admin.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "prepare": "husky"
   },

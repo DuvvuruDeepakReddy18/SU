@@ -11,7 +11,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { ProfileService } from './profile.service';
-import { UpdateProfileDto } from './dto';
+import { UpdateProfileDto, ResumeTextDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { JwtPayload } from '@skillverify/shared';
@@ -50,11 +50,8 @@ export class ProfileController {
 
   // Storage-free alternative — user pastes the text of their resume.
   @Post('resume-text')
-  parseResumeText(@CurrentUser() u: JwtPayload, @Body() body: { text: string }) {
-    if (!body?.text || typeof body.text !== 'string') {
-      throw new Error('text is required');
-    }
-    return this.profile.parseResumeText(u.sub, body.text);
+  parseResumeText(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: ResumeTextDto) {
+    return this.profile.parseResumeText(u.sub, dto.text);
   }
 
   @Public()

@@ -8,17 +8,29 @@ import {
   DefaultValuePipe,
   ParseIntPipe,
 } from '@nestjs/common';
-import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from 'nestjs-zod';
+import {
+  RejectActionSchema,
+  RecruiterRejectSchema,
+  InviteInterviewerSchema,
+} from '@skillverify/shared';
+import type { JwtPayload, AuditTargetType } from '@skillverify/shared';
 import { CollegeIdService } from '../verifications/college-id.service';
 import { AcademicRecordService } from '../verifications/academic-record.service';
 import { CommunityService } from '../community/community.service';
+import { RecruitersService } from '../recruiters/recruiters.service';
+import { InstitutionAdminService } from '../institution-admin/institution-admin.service';
+import { InterviewerService } from '../interviewer/interviewer.service';
+import { EmailService } from '../../infra/email/email.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { VerificationAuditService } from './verification-audit.service';
 
-const RejectSchema = z.object({ reason: z.string().min(3).max(500) });
-class RejectDto extends createZodDto(RejectSchema) {}
+class RejectDto extends createZodDto(RejectActionSchema) {}
+class RecruiterRejectDto extends createZodDto(RecruiterRejectSchema) {}
+class InviteInterviewerDto extends createZodDto(InviteInterviewerSchema) {}
 
 @Controller('admin')
 @Roles('PLATFORM_ADMIN')
@@ -27,8 +39,24 @@ export class AdminController {
     private readonly collegeId: CollegeIdService,
     private readonly academic: AcademicRecordService,
     private readonly community: CommunityService,
+    private readonly recruiters: RecruitersService,
+    private readonly institutionAdmins: InstitutionAdminService,
+    private readonly interviewers: InterviewerService,
+    private readonly email: EmailService,
     private readonly prisma: PrismaService,
+    private readonly audit: VerificationAuditService,
   ) {}
+
+  // ---- Audit log read endpoint (per-target trail) ----
+
+  @Get('audit/:targetType/:targetId')
+  auditTrail(
+    @Param('targetType') targetType: string,
+    @Param('targetId') targetId: string,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
+  ) {
+    return this.audit.forTarget(targetType as AuditTargetType, targetId, limit);
+  }
 
   // ---- College ID verification queue ----
 
@@ -38,43 +66,74 @@ export class AdminController {
   }
 
   @Post('verifications/college-ids/:userId/approve')
-  approveCollegeId(@Param('userId') userId: string) {
-    return this.collegeId.approve(userId);
+  async approveCollegeId(@CurrentUser() u: JwtPayload, @Param('userId') userId: string) {
+    const { before, updated } = await this.collegeId.approve(userId);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'college_id',
+      targetId: userId,
+      action: 'approve',
+      previousState: before ?? undefined,
+    });
+    return updated;
   }
 
   @Post('verifications/college-ids/:userId/reject')
-  rejectCollegeId(@Param('userId') userId: string, @Body(ZodValidationPipe) dto: RejectDto) {
-    return this.collegeId.reject(userId, dto.reason);
+  async rejectCollegeId(
+    @CurrentUser() u: JwtPayload,
+    @Param('userId') userId: string,
+    @Body(ZodValidationPipe) dto: RejectDto,
+  ) {
+    const { before, updated } = await this.collegeId.reject(userId, dto.reasonCode, dto.reasonNote);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'college_id',
+      targetId: userId,
+      action: 'reject',
+      reasonCode: dto.reasonCode,
+      reasonNote: dto.reasonNote ?? null,
+      previousState: before ?? undefined,
+    });
+    return updated;
   }
 
   // ---- Academic record verification queue ----
 
   @Get('verifications/academic-records')
   listPendingAcademic() {
-    return this.prisma.academicRecord.findMany({
-      where: { verificationStatus: 'pending' },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-      include: {
-        user: {
-          select: {
-            email: true,
-            studentProfile: { select: { governmentName: true, fullName: true } },
-            institution: { select: { name: true } },
-          },
-        },
-      },
-    });
+    return this.academic.listPending(100);
   }
 
   @Post('verifications/academic-records/:id/approve')
-  approveAcademic(@Param('id') id: string) {
-    return this.academic.approve(id);
+  async approveAcademic(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
+    const { before, rec } = await this.academic.approve(id);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'academic_record',
+      targetId: id,
+      action: 'approve',
+      previousState: before ?? undefined,
+    });
+    return rec;
   }
 
   @Post('verifications/academic-records/:id/reject')
-  rejectAcademic(@Param('id') id: string, @Body(ZodValidationPipe) dto: RejectDto) {
-    return this.academic.reject(id, dto.reason);
+  async rejectAcademic(
+    @CurrentUser() u: JwtPayload,
+    @Param('id') id: string,
+    @Body(ZodValidationPipe) dto: RejectDto,
+  ) {
+    const { before, rec } = await this.academic.reject(id, dto.reasonCode, dto.reasonNote);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'academic_record',
+      targetId: id,
+      action: 'reject',
+      reasonCode: dto.reasonCode,
+      reasonNote: dto.reasonNote ?? null,
+      previousState: before ?? undefined,
+    });
+    return rec;
   }
 
   // ---- Institution moderation (user-suggested rows) ----
@@ -89,32 +148,189 @@ export class AdminController {
   }
 
   @Post('institutions/:id/approve')
-  async approveInstitution(@Param('id') id: string) {
-    return this.prisma.institution.update({
+  async approveInstitution(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
+    const updated = await this.prisma.institution.update({
       where: { id },
       data: { verified: true },
     });
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'institution',
+      targetId: id,
+      action: 'approve',
+    });
+    return updated;
   }
 
   @Post('institutions/:id/reject')
-  async rejectInstitution(@Param('id') id: string) {
-    return this.prisma.institution.delete({ where: { id } });
+  async rejectInstitution(
+    @CurrentUser() u: JwtPayload,
+    @Param('id') id: string,
+    @Body(ZodValidationPipe) dto: RejectDto,
+  ) {
+    // Snapshot before destructive action so the audit row has the deleted data.
+    const before = await this.prisma.institution.findUnique({ where: { id } });
+    await this.prisma.institution.delete({ where: { id } });
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'institution',
+      targetId: id,
+      action: 'delete',
+      reasonCode: dto.reasonCode,
+      reasonNote: dto.reasonNote ?? null,
+      previousState: before ? { ...before, createdAt: before.createdAt.toISOString() } : undefined,
+    });
+    return { ok: true };
+  }
+
+  // ---- Recruiter approval queue ----
+
+  @Get('recruiters')
+  listPendingRecruiters() {
+    return this.recruiters.adminListPending(50);
+  }
+
+  @Post('recruiters/:userId/approve')
+  async approveRecruiter(@CurrentUser() u: JwtPayload, @Param('userId') userId: string) {
+    const { before, profile } = await this.recruiters.adminApprove(userId);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'recruiter',
+      targetId: userId,
+      action: 'approve',
+      previousState: before ?? undefined,
+    });
+    void this.email.sendRecruiterApproved(
+      profile.user.email,
+      profile.fullName ?? 'there',
+      profile.employer.name,
+    );
+    return profile;
+  }
+
+  @Post('recruiters/:userId/reject')
+  async rejectRecruiter(
+    @CurrentUser() u: JwtPayload,
+    @Param('userId') userId: string,
+    @Body(ZodValidationPipe) dto: RecruiterRejectDto,
+  ) {
+    const { before, profile } = await this.recruiters.adminReject(userId, dto.reason);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'recruiter',
+      targetId: userId,
+      action: 'reject',
+      reasonNote: dto.reason ?? null,
+      previousState: before ?? undefined,
+    });
+    void this.email.sendRecruiterRejected(
+      profile.user.email,
+      profile.fullName ?? 'there',
+      dto.reason ?? null,
+    );
+    return profile;
+  }
+
+  // ---- Institution / TPO approval queue ----
+
+  @Get('institution-admins')
+  listPendingInstitutionAdmins() {
+    return this.institutionAdmins.adminListPending(50);
+  }
+
+  @Post('institution-admins/:userId/approve')
+  async approveInstitutionAdmin(@CurrentUser() u: JwtPayload, @Param('userId') userId: string) {
+    const { before, profile } = await this.institutionAdmins.adminApprove(userId);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'institution_admin',
+      targetId: userId,
+      action: 'approve',
+      previousState: before ?? undefined,
+    });
+    void this.email.sendInstitutionAdminApproved(
+      profile.user.email,
+      profile.fullName ?? 'there',
+      profile.institution.name,
+    );
+    return profile;
+  }
+
+  @Post('institution-admins/:userId/reject')
+  async rejectInstitutionAdmin(
+    @CurrentUser() u: JwtPayload,
+    @Param('userId') userId: string,
+    @Body(ZodValidationPipe) dto: RecruiterRejectDto,
+  ) {
+    const { before, profile } = await this.institutionAdmins.adminReject(userId, dto.reason);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'institution_admin',
+      targetId: userId,
+      action: 'reject',
+      reasonNote: dto.reason ?? null,
+      previousState: before ?? undefined,
+    });
+    void this.email.sendInstitutionAdminRejected(
+      profile.user.email,
+      profile.fullName ?? 'there',
+      dto.reason ?? null,
+    );
+    return profile;
+  }
+
+  // ---- Interviewer management (invite-only) ----
+
+  @Get('interviewers')
+  listInterviewers() {
+    return this.interviewers.adminList();
+  }
+
+  @Post('interviewers/invite')
+  inviteInterviewer(@Body(ZodValidationPipe) dto: InviteInterviewerDto) {
+    return this.interviewers.adminInvite(dto);
+  }
+
+  @Post('interviewers/:userId/active')
+  setInterviewerActive(@Param('userId') userId: string, @Body() body: { active: boolean }) {
+    return this.interviewers.adminSetActive(userId, body.active !== false);
   }
 
   // ---- Community moderation ----
 
   @Post('community/posts/:id/hide')
-  hideCommunityPost(@Param('id') id: string) {
-    return this.community.hidePostByMod(id);
+  async hideCommunityPost(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
+    const updated = await this.community.hidePostByMod(id);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'community_post',
+      targetId: id,
+      action: 'hide',
+    });
+    return updated;
   }
 
   @Post('community/posts/:id/unhide')
-  unhideCommunityPost(@Param('id') id: string) {
-    return this.community.unhidePostByMod(id);
+  async unhideCommunityPost(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
+    const updated = await this.community.unhidePostByMod(id);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'community_post',
+      targetId: id,
+      action: 'unhide',
+    });
+    return updated;
   }
 
   @Post('community/comments/:id/hide')
-  hideCommunityComment(@Param('id') id: string) {
-    return this.community.hideCommentByMod(id);
+  async hideCommunityComment(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
+    const updated = await this.community.hideCommentByMod(id);
+    await this.audit.record({
+      actorUserId: u.sub,
+      targetType: 'community_comment',
+      targetId: id,
+      action: 'hide',
+    });
+    return updated;
   }
 }

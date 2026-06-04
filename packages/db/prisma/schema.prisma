@@ -46,6 +46,12 @@ model User {
   institution   Institution? @relation(fields: [institutionId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  // Soft-delete tombstone. When set, the user is treated as gone by every
+  // query path (login, profile, community, leaderboard, search). Their owned
+  // rows (comments, applications, posts) stay so threads don't break, but
+  // their display name/email is anonymized on deletion. Hard-delete remains
+  // available as an admin-only path for GDPR erasure if ever needed.
+  deletedAt     DateTime?
 
   studentProfile        StudentProfile?
   userSkills            UserSkill[]
@@ -58,7 +64,12 @@ model User {
   notifications         Notification[]
   votes                 CommunityVote[]
   communityComments     CommunityComment[]
-  interviewBookings     InterviewBooking[]
+  sentMessages          DirectMessage[]    @relation("SentMessages")
+  receivedMessages      DirectMessage[]    @relation("ReceivedMessages")
+  verificationAudits    VerificationAudit[]
+  interviewBookings     InterviewBooking[] @relation("StudentBookings")
+  conductedInterviews   InterviewBooking[] @relation("ConductedInterviews")
+  interviewerProfile    InterviewerProfile?
   postedDrives          PlacementDrive[] @relation("PostedDrives")
   placementApplications PlacementApplication[]
   postedCompetitions    Competition[]    @relation("PostedCompetitions")
@@ -67,6 +78,14 @@ model User {
   freelanceInquiriesAsClient   FreelanceInquiry[] @relation("FreelanceInquiriesAsClient")
   freelanceInquiriesAsProvider FreelanceInquiry[] @relation("FreelanceInquiriesAsProvider")
   freelanceMessages        FreelanceMessage[]
+  // Company / recruiter portal
+  createdEmployers         Employer[]         @relation("CreatedEmployers")
+  recruiterProfile         RecruiterProfile?
+  recruiterInquiriesSent   RecruiterInquiry[] @relation("RecruiterInquiriesAsRecruiter")
+  recruiterInquiriesReceived RecruiterInquiry[] @relation("RecruiterInquiriesAsStudent")
+  savedCandidates          SavedCandidate[]   @relation("SavedByRecruiter")
+  savedAsCandidate         SavedCandidate[]   @relation("SavedAsCandidate")
+  institutionAdminProfile  InstitutionAdminProfile?
 
   @@index([institutionId])
 }
@@ -90,6 +109,8 @@ model Institution {
   tier          String?
   licenseStatus String  @default("trial")
   users         User[]
+  admins        InstitutionAdminProfile[]
+  competitions  Competition[]
   createdAt     DateTime @default(now())
 
   @@index([category])
@@ -137,8 +158,11 @@ model StudentProfile {
   collegeIdUploadedAt       DateTime?
   collegeIdVerifiedAt       DateTime?
   // "pending_review" | "verified" | "rejected" | null (no ID uploaded yet)
-  collegeIdStatus           String?
-  collegeIdRejectionReason  String?
+  collegeIdStatus               String?
+  collegeIdRejectionReason      String?
+  // Structured rejection reason from REJECTION_REASONS enum. Free-text
+  // `collegeIdRejectionReason` field above stays as an optional human note.
+  collegeIdRejectionReasonCode  String?
   // Snapshot of what the OCR pre-screen extracted, for the admin queue.
   collegeIdOcrExtracted     Json?
   // User-defined "custom" links beyond the built-in social ones.
@@ -149,6 +173,9 @@ model StudentProfile {
   // order of sections on /u/[slug]. Defaults give the existing layout.
   shareTheme        String   @default("default") // "default" | "midnight" | "minimal"
   shareSectionsOrder String[] @default(["about", "skills", "projects", "certifications"])
+  // Onboarding wizard progress. 0 = not started, 1 = ID uploaded, 2 = skill
+  // added, 3 = first AC, 4 = done. Wizard auto-dismisses when this hits 4.
+  onboardingStep Int      @default(0)
   updatedAt      DateTime @updatedAt
 }
 
@@ -248,6 +275,8 @@ model AcademicRecord {
   // Raw OCR output for the admin queue / audit log.
   ocrExtracted         Json?
   rejectionReason      String?
+  // Structured rejection reason from REJECTION_REASONS enum.
+  rejectionReasonCode  String?
   verifiedVia String    // "digilocker" | "institution" | "manual" | "ai_ocr"
   verifiedAt  DateTime?
   createdAt   DateTime  @default(now())
@@ -430,12 +459,18 @@ model PracticeDomain {
 model InterviewBooking {
   id          String   @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation("StudentBookings", fields: [userId], references: [id], onDelete: Cascade)
+  // Interviewer who claimed + conducted this booking (shared pool). Null while
+  // the booking is still in the open queue.
+  interviewerId String?
+  interviewer   User?  @relation("ConductedInterviews", fields: [interviewerId], references: [id], onDelete: SetNull)
   skillId     String?
   scheduledAt DateTime
   status      String   @default("scheduled") // "scheduled" | "passed" | "failed" | "cancelled" | "no_show"
   notes       String?
   panelNotes  String?
+  // Overall interviewer score (0–100), set when scored.
+  score       Int?
   result      String?  // "L4_VERIFIED" | "FEEDBACK_ONLY"
   meetingUrl  String?  // auto-generated Jitsi room URL
   // Razorpay payment fields — null when the platform is in free-beta mode.
@@ -447,6 +482,27 @@ model InterviewBooking {
   createdAt   DateTime @default(now())
 
   @@index([userId, scheduledAt])
+  @@index([interviewerId])
+  @@index([status])
+}
+
+// ---------- Interviewer portal (L4 expert interviews) ----------
+// Invite-only expert interviewers. Created by a platform admin (so they're
+// pre-approved); they claim open bookings from a shared pool, conduct off
+// platform via the booking's meetingUrl, and score → award L4_EXPERT.
+model InterviewerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName  String?
+  bio       String?
+  // Free-text expertise tags (skill / domain names) shown to help self-select
+  // from the pool.
+  expertise String[]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([active])
 }
 
 // ---------- Campus placement drives ----------
@@ -454,6 +510,10 @@ model PlacementDrive {
   id          String   @id @default(cuid())
   postedById  String
   postedBy    User     @relation("PostedDrives", fields: [postedById], references: [id], onDelete: Cascade)
+  // Company portal: recruiter-posted drives link to their Employer. Null for
+  // legacy / institution-posted drives.
+  employerId  String?
+  employer    Employer? @relation(fields: [employerId], references: [id], onDelete: SetNull)
   company     String
   role        String
   description String?
@@ -467,9 +527,11 @@ model PlacementDrive {
   closesAt    DateTime?
   createdAt   DateTime @default(now())
   applications PlacementApplication[]
+  recruiterInquiries RecruiterInquiry[]
 
   @@index([institutionId])
   @@index([jobType])
+  @@index([employerId])
 }
 
 model PlacementApplication {
@@ -478,10 +540,17 @@ model PlacementApplication {
   drive     PlacementDrive @relation(fields: [driveId], references: [id], onDelete: Cascade)
   userId    String
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status    String         @default("applied") // "applied" | "shortlisted" | "rejected" | "hired"
+  // Pipeline stage. "applied" / "shortlisted" / "interviewing" / "offered" /
+  // "hired" / "rejected".
+  status    String         @default("applied")
+  // How the candidate entered the pipeline: "applied" (student applied) or
+  // "sourced" (recruiter pulled them in from candidate search).
+  sourcedBy String         @default("applied")
   createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt @default(now())
 
   @@unique([driveId, userId])
+  @@index([driveId, status])
 }
 
 // ---------- Competitions (compete tab) ----------
@@ -496,10 +565,16 @@ model Competition {
   bannerUrl   String?
   postedById  String?
   postedBy    User?    @relation("PostedCompetitions", fields: [postedById], references: [id])
+  // Institute-scoped competitions: TPO-posted ones set scope=institute_only +
+  // institutionId so only that institution's students see them.
+  scope         String  @default("public") // "public" | "institute_only"
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
   entries     CompetitionEntry[]
   createdAt   DateTime @default(now())
 
   @@index([category, startsAt])
+  @@index([institutionId])
 }
 
 model CompetitionEntry {
@@ -514,6 +589,49 @@ model CompetitionEntry {
   createdAt     DateTime    @default(now())
 
   @@unique([competitionId, userId])
+}
+
+// ---------- Audit log for human-reviewer / admin actions ----------
+// Every admin write action (approve / reject a college-ID, hide a post,
+// approve a user-suggested institution, etc.) writes one row here. Future
+// disputes get investigated from this single source of truth.
+//
+// `targetType` + `targetId` is a polymorphic pointer — we deliberately don't
+// FK to each target table because we want the audit row to survive even if
+// the target is hard-deleted later (e.g. an institution rejected & removed).
+model VerificationAudit {
+  id            String   @id @default(cuid())
+  actorUserId   String
+  actor         User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+  targetType    String   // "college_id" | "academic_record" | "institution" | "community_post" | "community_comment"
+  targetId      String
+  action        String   // "approve" | "reject" | "edit" | "hide" | "unhide" | "delete"
+  reasonCode    String?  // from REJECTION_REASONS enum on reject actions
+  reasonNote    String?
+  previousState Json?    // snapshot of fields that changed (for diffing)
+  createdAt     DateTime @default(now())
+
+  @@index([targetType, targetId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+// ---------- Direct messages (1:1 chat) ----------
+// Minimal Twitter-DM-style model — no read receipts beyond a readAt timestamp,
+// no media, no group chats yet. Threads are implied by the (senderId,
+// recipientId) pair — we query both directions when loading a conversation.
+model DirectMessage {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([recipientId, readAt])
+  @@index([senderId, createdAt])
+  @@index([recipientId, senderId, createdAt])
 }
 
 // ---------- Freelance marketplace ----------
@@ -572,4 +690,127 @@ model FreelanceMessage {
   createdAt DateTime         @default(now())
 
   @@index([inquiryId, createdAt])
+}
+
+/// Server-side idempotency cache. The interceptor records the first response
+/// for a given (key, userId, route) tuple and serves the cached response on
+/// any retry that arrives within `expiresAt`. Protects against the
+/// double-booking / double-application class of bug when a flaky client
+/// retries a POST.
+///
+/// The cache is scoped by user so two different students sharing a key
+/// (theoretically possible if a client hardcodes one) don't collide.
+model IdempotencyKey {
+  key         String   @id
+  userId      String
+  route       String
+  statusCode  Int
+  responseBody Json
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@unique([key, userId, route])
+  @@index([expiresAt])
+}
+
+// ---------- Company / Recruiter portal ----------
+// Demand side of the marketplace. Recruiters are vetted (admin-approved) before
+// they can search students; contact details are gated behind student consent
+// (RecruiterInquiry accept). One recruiter per company in v1.
+
+model Employer {
+  id          String   @id @default(cuid())
+  name        String
+  website     String?
+  // Verified company email domain, when known. Optional and unique-when-set.
+  domain      String?  @unique
+  logoUrl     String?
+  description String?
+  // Org-level approval flag, set when the founding recruiter is approved.
+  verified    Boolean  @default(false)
+  // The founding recruiter. 1 recruiter / company in v1 (RecruiterProfile is 1:1).
+  createdById String
+  createdBy   User     @relation("CreatedEmployers", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  recruiter   RecruiterProfile?
+  drives      PlacementDrive[]
+
+  @@index([createdById])
+}
+
+model RecruiterProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // 1 recruiter per company in v1 → employer is unique to this recruiter.
+  employerId  String   @unique
+  employer    Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  fullName    String?  // recruiter's display name
+  title       String?  // "Talent Lead", "Founder", etc.
+  // "pending" | "approved" | "rejected" — gates access to candidate search.
+  status      String   @default("pending")
+  approvedAt  DateTime?
+  rejectionReasonCode String?
+  rejectionReason     String?
+  createdAt   DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+// Recruiter → student contact request. Mirrors FreelanceInquiry: the student
+// must accept before the recruiter sees their contact details. Optionally tied
+// to a specific drive for context.
+model RecruiterInquiry {
+  id          String   @id @default(cuid())
+  recruiterId String
+  recruiter   User     @relation("RecruiterInquiriesAsRecruiter", fields: [recruiterId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     User     @relation("RecruiterInquiriesAsStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  driveId     String?
+  drive       PlacementDrive? @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  message     String
+  // "pending" | "accepted" | "declined". Accept reveals contact + opens a DM.
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @default(now())
+
+  @@unique([recruiterId, studentId, driveId])
+  @@index([studentId, createdAt])
+  @@index([recruiterId, createdAt])
+}
+
+// ---------- Institution / TPO portal ----------
+// Placement-cell admins with read-only oversight of their institution's
+// students + the ability to post institute-scoped drives/competitions. Vetted
+// (admin-approved). Multiple admins per institution allowed.
+model InstitutionAdminProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  fullName      String?
+  title         String?  // "Placement Officer", "TPO", "Dean", etc.
+  // "pending" | "approved" | "rejected" — gates access to the roster.
+  status        String   @default("pending")
+  approvedAt    DateTime?
+  rejectionReason String?
+  createdAt     DateTime @default(now())
+
+  @@index([institutionId])
+  @@index([status, createdAt])
+}
+
+// Recruiter's saved shortlist bookmark.
+model SavedCandidate {
+  id          String   @id @default(cuid())
+  recruiterId String
+  recruiter   User     @relation("SavedByRecruiter", fields: [recruiterId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     User     @relation("SavedAsCandidate", fields: [studentId], references: [id], onDelete: Cascade)
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@unique([recruiterId, studentId])
+  @@index([recruiterId, createdAt])
 }

@@ -1,7 +1,17 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseInterceptors,
+} from '@nestjs/common';
 import { InterviewsService } from './interviews.service';
 import { RazorpayService } from './razorpay.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { IdempotencyInterceptor } from '../../common/interceptors/idempotency.interceptor';
 import type { JwtPayload } from '@skillverify/shared';
 
 @Controller('interviews')
@@ -17,6 +27,7 @@ export class InterviewsController {
   }
 
   @Post()
+  @UseInterceptors(IdempotencyInterceptor)
   book(
     @CurrentUser() u: JwtPayload,
     @Body() body: { skillId?: string; scheduledAt: string; notes?: string },
@@ -34,10 +45,25 @@ export class InterviewsController {
    * Create a Razorpay order for an L4 interview. Returns 503 until
    * RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET are set. The frontend uses the
    * returned `keyId` + `orderId` to open the Razorpay checkout modal.
+   *
+   * `scheduledAt` is required at order time so the webhook can finish the
+   * booking even if the frontend never calls /verify-and-book.
    */
   @Post('payments/order')
-  createPaymentOrder(@CurrentUser() u: JwtPayload) {
-    return this.razorpay.createInterviewOrder(u.sub);
+  @UseInterceptors(IdempotencyInterceptor)
+  createPaymentOrder(
+    @CurrentUser() u: JwtPayload,
+    @Body() body: { scheduledAt: string; notes?: string; skillId?: string },
+  ) {
+    if (!body?.scheduledAt) {
+      throw new BadRequestException('scheduledAt required at order time.');
+    }
+    return this.razorpay.createInterviewOrder({
+      userId: u.sub,
+      scheduledAt: body.scheduledAt,
+      notes: body.notes,
+      skillId: body.skillId,
+    });
   }
 
   /**

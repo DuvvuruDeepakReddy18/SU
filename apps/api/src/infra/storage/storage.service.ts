@@ -64,6 +64,34 @@ export class StorageService {
     return `${this.publicUrl}/${key}`;
   }
 
+  /**
+   * Trade a stored full URL for a short-lived signed URL. PII like college IDs
+   * and marksheet scans should never be served from a permanent public URL;
+   * admin/owner-only endpoints replace the persisted URL with this just-in-time
+   * download link (default 10 min — long enough for an admin to load several
+   * images, short enough that a leaked log line goes stale fast).
+   *
+   * Falls back to the input URL when S3 isn't configured (dev) or when the
+   * stored URL doesn't share the configured public prefix (legacy / migration).
+   */
+  async signedDownloadFor(
+    storedUrl: string | null | undefined,
+    expiresIn = 600,
+  ): Promise<string | null> {
+    if (!storedUrl) return null;
+    if (!this.client) return storedUrl;
+    const prefix = `${this.publicUrl}/`;
+    if (!storedUrl.startsWith(prefix)) return storedUrl;
+    const key = storedUrl.slice(prefix.length);
+    if (!key) return storedUrl;
+    try {
+      return await this.getSignedDownloadUrl(key, expiresIn);
+    } catch (e) {
+      this.log.warn(`Failed to sign URL for key ${key}: ${(e as Error).message}`);
+      return storedUrl;
+    }
+  }
+
   isConfigured(): boolean {
     return this.client !== null;
   }

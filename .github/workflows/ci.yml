@@ -22,6 +22,14 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     env:
       DATABASE_URL: postgresql://skillverify:skillverify@localhost:5432/skillverify?schema=public
@@ -48,8 +56,24 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      # Apply migrations against the throwaway CI postgres so any
+      # integration-style tests (later) have a real schema to talk to.
+      # `migrate deploy` is non-interactive and is the right CI invocation.
+      - name: Apply migrations
+        run: pnpm --filter @skillverify/db migrate:deploy
+
+      # Seed reference data (institutions, skills, problems) so the e2e
+      # smoke tests have real rows to read and sign up against. Idempotent.
+      - name: Seed database
+        run: pnpm --filter @skillverify/db seed:prod
+
       - run: pnpm lint
 
       - run: pnpm typecheck
 
       - run: pnpm test
+
+      # End-to-end smoke tests — boot the real Nest app against the CI
+      # Postgres + Redis and exercise signup / login / public reads.
+      - name: E2E smoke tests
+        run: pnpm --filter @skillverify/api test:e2e:ci

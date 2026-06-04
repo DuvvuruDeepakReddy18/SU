@@ -8,7 +8,14 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { FreelanceService } from './freelance.service';
+import {
+  FreelanceServiceCreateDto,
+  FreelanceInquiryDto,
+  InquiryStatusDto,
+  InquiryMessageDto,
+} from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { JwtPayload } from '@skillverify/shared';
@@ -48,12 +55,8 @@ export class FreelanceController {
   }
 
   @Post('services')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  create(@CurrentUser() u: JwtPayload, @Body() body: any) {
-    if (!body?.title || !body?.category || !body?.description) {
-      throw new BadRequestException('title, category, description required');
-    }
-    return this.svc.create(u.sub, body);
+  create(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: FreelanceServiceCreateDto) {
+    return this.svc.create(u.sub, dto);
   }
 
   @Delete('services/:id')
@@ -90,32 +93,26 @@ export class FreelanceController {
   inquire(
     @CurrentUser() u: JwtPayload,
     @Param('id') id: string,
-    @Body() body: { brief: string; budgetInr?: number; deadlineAt?: string },
+    @Body(ZodValidationPipe) dto: FreelanceInquiryDto,
   ) {
-    if (!body?.brief || body.brief.trim().length < 10) {
-      throw new BadRequestException('brief (≥10 chars) required');
-    }
-    return this.svc.createInquiry(u.sub, id, body.brief.trim(), body.budgetInr, body.deadlineAt);
+    return this.svc.createInquiry(u.sub, id, dto.brief.trim(), dto.budgetInr, dto.deadlineAt);
   }
 
   @Post('inquiries/:id/status')
   setInquiryStatus(
     @CurrentUser() u: JwtPayload,
     @Param('id') id: string,
-    @Body()
-    body: { status: 'accepted' | 'declined' | 'completed' | 'cancelled'; providerNote?: string },
+    @Body(ZodValidationPipe) dto: InquiryStatusDto,
   ) {
-    if (!body?.status) throw new BadRequestException('status required');
-    return this.svc.setInquiryStatus(u.sub, id, body.status, body.providerNote);
+    return this.svc.setInquiryStatus(u.sub, id, dto.status, dto.providerNote);
   }
 
   @Post('inquiries/:id/messages')
   addMessage(
     @CurrentUser() u: JwtPayload,
     @Param('id') id: string,
-    @Body() body: { body: string },
+    @Body(ZodValidationPipe) dto: InquiryMessageDto,
   ) {
-    if (!body?.body?.trim()) throw new BadRequestException('body required');
-    return this.svc.addInquiryMessage(u.sub, id, body.body.trim());
+    return this.svc.addInquiryMessage(u.sub, id, dto.body.trim());
   }
 }

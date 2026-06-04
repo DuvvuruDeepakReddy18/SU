@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { ResumeParseResult } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { StorageService } from '../../infra/storage/storage.service';
 import { ResumeParser } from './resume-parser';
-import { CollegeIdService } from '../verifications/college-id.service';
+import { QueueService } from '../../infra/queue/queue.service';
+import { QUEUE_NAMES, VERIFICATION_JOBS } from '../../infra/queue/queue.constants';
 import type { UpdateProfileDto } from './dto';
 
 @Injectable()
@@ -12,7 +13,7 @@ export class ProfileService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly parser: ResumeParser,
-    private readonly collegeId: CollegeIdService,
+    private readonly queue: QueueService,
   ) {}
 
   async getMine(userId: string) {
@@ -29,8 +30,9 @@ export class ProfileService {
   }
 
   async uploadAvatar(userId: string, file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file uploaded.');
     if (!file.mimetype.startsWith('image/')) {
-      throw new Error('Avatar must be an image');
+      throw new BadRequestException('Avatar must be an image');
     }
     const uploaded = await this.storage.upload(`avatars/${userId}`, file);
     await this.prisma.studentProfile.update({
@@ -41,8 +43,9 @@ export class ProfileService {
   }
 
   async uploadCollegeId(userId: string, file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file uploaded.');
     const ok = file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf';
-    if (!ok) throw new Error('College ID must be an image or PDF');
+    if (!ok) throw new BadRequestException('College ID must be an image or PDF');
     const uploaded = await this.storage.upload(`college-ids/${userId}`, file);
     await this.prisma.studentProfile.update({
       where: { userId },
@@ -56,14 +59,22 @@ export class ProfileService {
         collegeIdRejectionReason: null,
       },
     });
-    // Fire AI rescreen if available.
-    void this.collegeId.screen(userId);
+    // Enqueue AI re-screen — runs in the verification worker. jobId keeps
+    // rapid re-uploads from queuing many redundant jobs (latest wins).
+    // BullMQ forbids ':' in custom job ids, so use '-'.
+    await this.queue.addNamed(
+      QUEUE_NAMES.VERIFICATION_SCREEN,
+      VERIFICATION_JOBS.SCREEN_COLLEGE_ID,
+      { userId },
+      { jobId: `screen-college-id-${userId}` },
+    );
     return uploaded;
   }
 
   async uploadResume(userId: string, file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file uploaded.');
     if (file.mimetype !== 'application/pdf') {
-      throw new Error('Resume must be a PDF');
+      throw new BadRequestException('Resume must be a PDF');
     }
     const uploaded = await this.storage.upload(`resumes/${userId}`, file);
     await this.prisma.studentProfile.update({
@@ -104,7 +115,9 @@ export class ProfileService {
         },
       },
     });
-    if (!profile || !profile.isPublic) return null;
+    // Hide soft-deleted users from public listing too (the user row stays
+    // for FK integrity, but their portfolio must not surface at /u/<slug>).
+    if (!profile || !profile.isPublic || profile.user.deletedAt) return null;
     return profile;
   }
 

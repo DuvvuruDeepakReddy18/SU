@@ -19,7 +19,10 @@ export class LayerEngine {
       include: { skill: true },
     });
     if (!us) return null;
-    const layer = await this.computeLayer(us.userId, us.skillId);
+    const layer = this.withL4Floor(
+      await this.computeLayer(us.userId, us.skillId),
+      us.highestVerificationLayer,
+    );
     if (layer !== us.highestVerificationLayer) {
       await this.prisma.userSkill.update({
         where: { id: us.id },
@@ -33,7 +36,10 @@ export class LayerEngine {
     const skills = await this.prisma.userSkill.findMany({ where: { userId } });
     const results: { userSkillId: string; layer: VerificationLayer }[] = [];
     for (const us of skills) {
-      const layer = await this.computeLayer(userId, us.skillId);
+      const layer = this.withL4Floor(
+        await this.computeLayer(userId, us.skillId),
+        us.highestVerificationLayer,
+      );
       if (layer !== us.highestVerificationLayer) {
         await this.prisma.userSkill.update({
           where: { id: us.id },
@@ -43,6 +49,15 @@ export class LayerEngine {
       results.push({ userSkillId: us.id, layer });
     }
     return results;
+  }
+
+  /**
+   * L4_EXPERT is awarded only by passing an expert interview — it's never
+   * computed from evidence. So a recompute must never downgrade an existing
+   * L4 back to a computed L0–L3. Treat L4 as a floor.
+   */
+  private withL4Floor(computed: VerificationLayer, current: VerificationLayer): VerificationLayer {
+    return current === VerificationLayer.L4_EXPERT ? VerificationLayer.L4_EXPERT : computed;
   }
 
   private async computeLayer(userId: string, skillId: string): Promise<VerificationLayer> {

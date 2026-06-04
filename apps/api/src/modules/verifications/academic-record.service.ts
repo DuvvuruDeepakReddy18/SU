@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import type { RejectionReason } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { OpenRouterClient } from '../../infra/openrouter/openrouter.client';
 import { StorageService } from '../../infra/storage/storage.service';
+import { EmailService } from '../../infra/email/email.service';
 import { LayerEngine } from './layer-engine';
 
 const VISION_MODELS = [
@@ -41,17 +43,17 @@ export class AcademicRecordService {
     private readonly openrouter: OpenRouterClient,
     private readonly storage: StorageService,
     private readonly engine: LayerEngine,
+    private readonly email: EmailService,
   ) {}
 
   /**
-   * Upload + OCR a semester marksheet. Verifies the extracted
-   * student-name + institution-name match the student's profile and
-   * runs a few anti-tamper signals (duplicate hash, AI-flagged edits,
-   * missing official stamp).
+   * Sync portion of a marksheet upload: hash-dedup, S3 upload, create a
+   * `pending` row, return the record id. The slow OCR + auto-verify decision
+   * runs in the verification-screen queue worker.
+   *
+   * Throws on duplicate-across-accounts (fraud signal) or missing storage.
    */
   async uploadSemester(input: SemesterUploadInput) {
-    // 1. Hash for dedup. Same file content for the same user (re-upload)
-    //    is allowed; for different users it's almost certainly fraud.
     const sha256 = createHash('sha256').update(input.fileBuffer).digest('hex');
     const dupe = await this.prisma.academicRecord.findFirst({
       where: { fileSha256: sha256, NOT: { userId: input.userId } },
@@ -62,8 +64,6 @@ export class AcademicRecordService {
           'If you believe this is a mistake, contact support.',
       );
     }
-
-    // 2. Upload to storage.
     if (!this.storage.isConfigured()) {
       throw new BadRequestException(
         'File uploads aren’t configured on this server. Contact support.',
@@ -75,22 +75,52 @@ export class AcademicRecordService {
       originalname: input.fileName,
     });
 
-    // 3. Look up the user's profile to compare extracted vs claimed.
+    const record = await this.prisma.academicRecord.create({
+      data: {
+        userId: input.userId,
+        semester: input.semester,
+        // Placeholders — the worker fills in real OCR-extracted grades.
+        cgpa: 0,
+        sgpa: null,
+        docUrl: uploaded.url,
+        fileSha256: sha256,
+        verifiedVia: 'ai_ocr',
+        verificationStatus: 'pending',
+        ocrExtracted: { queued: true, aiSkipped: !process.env.OPENROUTER_API_KEY },
+      },
+    });
+    return record;
+  }
+
+  /**
+   * Worker-side: run OCR + auto-verify decision for a record created by
+   * `uploadSemester`. Idempotent — re-running just re-OCRs and overwrites
+   * the prior result. Safe to retry on failure.
+   */
+  async processOcrForRecord(recordId: string): Promise<void> {
+    const record = await this.prisma.academicRecord.findUnique({ where: { id: recordId } });
+    if (!record || !record.docUrl) {
+      this.log.warn(`processOcrForRecord: record ${recordId} missing or has no doc URL`);
+      return;
+    }
     const profile = await this.prisma.studentProfile.findUnique({
-      where: { userId: input.userId },
+      where: { userId: record.userId },
       include: { user: { include: { institution: true } } },
     });
-    if (!profile) throw new BadRequestException('Profile not found');
+    if (!profile) {
+      this.log.warn(`processOcrForRecord: profile missing for ${record.userId}`);
+      return;
+    }
 
-    // 4. OCR via vision model. If AI isn't configured, we create the record
-    //    as `pending` so an admin can manually verify.
+    // Run OCR via vision model. If AI isn't configured the record stays
+    // 'pending' for an admin to manually verify.
     let extracted: z.infer<typeof OcrSchema> = {};
     let aiSkipped = false;
     if (!process.env.OPENROUTER_API_KEY) {
       aiSkipped = true;
     } else {
       try {
-        const dataUrl = this.bufferToDataUrl(input.fileBuffer, input.fileMime);
+        const dataUrl = await this.fetchAsDataUrl(record.docUrl);
         const system =
           'You are a verification analyst. Extract structured data from a college semester marksheet image. ' +
           'Be conservative. Return ONLY a JSON object.';
@@ -101,10 +131,10 @@ export class AcademicRecordService {
   "semester": number | string | null,
   "sgpa": number | string | null,
   "cgpa": number | string | null,
-  "examDate": string | null,           // any visible exam date (issue/exam/result date)
-  "hasOfficialStamp": boolean | null,  // true if an official seal/watermark is visible
-  "isLikelyEdited": boolean | null,    // true if you see mismatched fonts, layer artifacts, blur over text
-  "confidence": number                 // 0..1
+  "examDate": string | null,
+  "hasOfficialStamp": boolean | null,
+  "isLikelyEdited": boolean | null,
+  "confidence": number
 }
 If a field cannot be read, use null.`;
         const raw = await this.openrouter.visionJson(VISION_MODELS, system, user, dataUrl);
@@ -119,7 +149,6 @@ If a field cannot be read, use null.`;
       }
     }
 
-    // 5. Decide auto-verify vs pending_review.
     const claimedName = profile.governmentName ?? profile.fullName;
     const claimedInst = profile.user?.institution?.name ?? '';
     const nameMatch = fuzzyNameMatch(extracted.studentName ?? null, claimedName);
@@ -127,12 +156,8 @@ If a field cannot be read, use null.`;
     const confidence = extracted.confidence ?? 0;
     const edited = extracted.isLikelyEdited === true;
     const hasStamp = extracted.hasOfficialStamp === true;
-
     const extractedCgpa = parseNum(extracted.cgpa);
     const extractedSgpa = parseNum(extracted.sgpa);
-    if (extractedCgpa == null && extractedSgpa == null && !aiSkipped) {
-      // OCR ran but couldn't read a grade — definitely needs human review.
-    }
 
     const autoVerify =
       !aiSkipped &&
@@ -143,21 +168,14 @@ If a field cannot be read, use null.`;
       hasStamp &&
       (extractedCgpa != null || extractedSgpa != null);
 
-    // 6. Create the row.
-    const record = await this.prisma.academicRecord.create({
+    await this.prisma.academicRecord.update({
+      where: { id: recordId },
       data: {
-        userId: input.userId,
-        semester: input.semester,
-        // Prefer OCR-extracted grades when present; fall back to 0 (will be
-        // overwritten on admin approval with the manually-entered value).
         cgpa: extractedCgpa ?? 0,
         sgpa: extractedSgpa ?? null,
-        docUrl: uploaded.url,
-        fileSha256: sha256,
         extractedName: extracted.studentName ?? null,
         extractedInstitution: extracted.institutionName ?? null,
         examDate: parseDate(extracted.examDate),
-        verifiedVia: 'ai_ocr',
         verificationStatus: autoVerify ? 'verified' : 'pending',
         verifiedAt: autoVerify ? new Date() : null,
         ocrExtracted: {
@@ -172,11 +190,16 @@ If a field cannot be read, use null.`;
       },
     });
 
-    // 7. Recompute the profile's master CGPA from verified records only.
-    await this.recomputeProfileCgpa(input.userId);
-    await this.engine.recomputeAllForUser(input.userId);
+    await this.recomputeProfileCgpa(record.userId);
+    await this.engine.recomputeAllForUser(record.userId);
+  }
 
-    return record;
+  private async fetchAsDataUrl(url: string): Promise<string> {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch marksheet image: ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    const mime = res.headers.get('content-type') ?? 'image/jpeg';
+    return `data:${mime};base64,${buf.toString('base64')}`;
   }
 
   async listMine(userId: string) {
@@ -214,28 +237,111 @@ If a field cannot be read, use null.`;
     });
   }
 
+  /**
+   * Admin queue. Returns pending records with `docUrl` swapped for a 10-min
+   * signed URL (see StorageService.signedDownloadFor) so persistent public
+   * URLs to marksheets never leave the service boundary.
+   */
+  async listPending(limit = 100) {
+    const rows = await this.prisma.academicRecord.findMany({
+      where: { verificationStatus: 'pending' },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        user: {
+          select: {
+            email: true,
+            studentProfile: { select: { governmentName: true, fullName: true } },
+            institution: { select: { name: true } },
+          },
+        },
+      },
+    });
+    return Promise.all(
+      rows.map(async (r) => ({
+        ...r,
+        docUrl: await this.storage.signedDownloadFor(r.docUrl),
+      })),
+    );
+  }
+
   // Admin actions
   async approve(recordId: string) {
+    const before = await this.prisma.academicRecord.findUnique({
+      where: { id: recordId },
+      select: { verificationStatus: true, rejectionReasonCode: true },
+    });
     const rec = await this.prisma.academicRecord.update({
       where: { id: recordId },
-      data: { verificationStatus: 'verified', verifiedAt: new Date(), rejectionReason: null },
+      data: {
+        verificationStatus: 'verified',
+        verifiedAt: new Date(),
+        rejectionReason: null,
+        rejectionReasonCode: null,
+      },
     });
     await this.recomputeProfileCgpa(rec.userId);
     await this.engine.recomputeAllForUser(rec.userId);
-    return rec;
+    void this.notifyOnApprove(rec.userId, rec.semester);
+    return { before, rec };
   }
 
-  async reject(recordId: string, reason: string) {
+  async reject(recordId: string, reasonCode: string, reasonNote?: string | null) {
+    const before = await this.prisma.academicRecord.findUnique({
+      where: { id: recordId },
+      select: { verificationStatus: true, rejectionReasonCode: true },
+    });
     const rec = await this.prisma.academicRecord.update({
       where: { id: recordId },
-      data: { verificationStatus: 'rejected', verifiedAt: null, rejectionReason: reason },
+      data: {
+        verificationStatus: 'rejected',
+        verifiedAt: null,
+        rejectionReasonCode: reasonCode,
+        rejectionReason: reasonNote ?? null,
+      },
     });
     await this.recomputeProfileCgpa(rec.userId);
-    return rec;
+    void this.notifyOnReject(
+      rec.userId,
+      rec.semester,
+      reasonCode as RejectionReason,
+      reasonNote ?? null,
+    );
+    return { before, rec };
   }
 
-  private bufferToDataUrl(buf: Buffer, mime: string): string {
-    return `data:${mime};base64,${buf.toString('base64')}`;
+  /** Fire-and-forget email send. Looks up the student's email + display name. */
+  private async notifyOnApprove(userId: string, semester: number) {
+    const profile = await this.prisma.studentProfile.findUnique({
+      where: { userId },
+      include: { user: { select: { email: true } } },
+    });
+    if (!profile) return;
+    await this.email.sendMarksheetApproved(
+      profile.user.email,
+      profile.governmentName ?? profile.fullName,
+      semester,
+    );
+  }
+
+  private async notifyOnReject(
+    userId: string,
+    semester: number,
+    reasonCode: RejectionReason,
+    reasonNote: string | null,
+  ) {
+    const profile = await this.prisma.studentProfile.findUnique({
+      where: { userId },
+      include: { user: { select: { email: true } } },
+    });
+    if (!profile) return;
+    await this.email.sendMarksheetRejected(
+      profile.user.email,
+      profile.governmentName ?? profile.fullName,
+      semester,
+      reasonCode,
+      reasonNote,
+    );
   }
 }
 
