@@ -1,16 +1,30 @@
-# SkillVerify — Student Portal (Phase 1)
+# SkillVerify
 
-AI-aggregated, four-layer-verified skill portfolios for students.
+AI-aggregated, four-layer-verified skill portfolios for Indian college students —
+with a full hiring loop on top (recruiters, placement cells, and expert interviewers).
 
 This monorepo contains:
 
-| Package           | Description                                                     |
-| ----------------- | --------------------------------------------------------------- |
-| `apps/web`        | Next.js 14 student portal (App Router, Auth.js, TanStack Query) |
-| `apps/api`        | NestJS REST API (JWT, Prisma, BullMQ, OpenRouter, Judge0)       |
-| `packages/db`     | Prisma schema, migrations, seed data                            |
-| `packages/shared` | Zod schemas + constants shared across web/api                   |
-| `packages/ui`     | Shared UI utilities (extension point for future portals)        |
+| Package           | Description                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| `apps/web`        | Next.js 14 frontend — five role-gated portals (App Router, Auth.js, TanStack Query) |
+| `apps/api`        | NestJS REST API (JWT, Prisma, BullMQ, OpenRouter, Judge0)                           |
+| `packages/db`     | Prisma schema, migrations, seed data                                                |
+| `packages/shared` | Zod schemas + constants shared across web/api                                       |
+| `packages/ui`     | Shared UI utilities                                                                 |
+
+## Portals
+
+One Next.js app, five role-gated portals (route groups under `apps/web/app/`),
+all behind a global JWT + roles guard:
+
+| Portal      | Route group     | Who                 | What                                                         |
+| ----------- | --------------- | ------------------- | ------------------------------------------------------------ |
+| Student     | `(student)`     | `STUDENT`           | Profile, skills, verifications, practice, community, jobs    |
+| Company     | `(company)`     | `RECRUITER`         | Vetted hiring — candidate search, jobs, gated contact reveal |
+| Institution | `(institution)` | `INSTITUTION_ADMIN` | Placement-cell oversight — roster, drives, analytics         |
+| Interviewer | `(interviewer)` | `INTERVIEWER`       | Shared-pool expert screens that award L4                     |
+| Admin       | `(admin)`       | `PLATFORM_ADMIN`    | Verification queue + recruiter/TPO/interviewer approvals     |
 
 ## Quick start
 
@@ -28,7 +42,7 @@ docker compose up -d
 pnpm db:generate
 pnpm db:migrate
 
-# 5. Seed (200+ skills, 50 cert rules, 100 problems, 3 institutions, 5 demo users)
+# 5. Seed (200+ skills, cert rules, curriculum problems, 250+ institutions, demo users)
 pnpm db:seed
 
 # 6. Run everything (web on :3000, api on :4000)
@@ -79,7 +93,7 @@ All demo accounts are seeded with `password123` and verified institution emails.
        (Prisma) (BullMQ)
                 │
                 ▼
-            Judge0  Anthropic  Resend
+            Judge0  OpenRouter  Resend
 ```
 
 ## Verification layers
@@ -90,9 +104,17 @@ All demo accounts are seeded with `password123` and verified institution emails.
 | L1 — Academic   | ≥1 verified academic record                                  |
 | L2 — Certified  | L1 + verified cert linked to skill (admin-curated tier rule) |
 | L3 — Proven     | L2 + project tagged with skill, public repo URL              |
-| L4 — Expert     | Expert screening — stubbed in Phase 1                        |
+| L4 — Expert     | Live expert interview (interviewer portal) → pass awards L4  |
 
-State recomputed in [`apps/api/src/modules/verifications/layer-engine.ts`](apps/api/src/modules/verifications/layer-engine.ts) whenever a child entity changes.
+State recomputed in [`apps/api/src/modules/verifications/layer-engine.ts`](apps/api/src/modules/verifications/layer-engine.ts) whenever a child entity changes. L4 is floor-protected — an interview-granted L4 is never recomputed back down.
+
+## Accounts & security
+
+- **Auth:** email/password + Google/GitHub OAuth (Auth.js → API JWT).
+- **Email verification** (soft-nudge) + **password reset** + **change password**, via single-use, SHA-256-hashed, expiring tokens (`apps/api/src/modules/auth/auth-token.service.ts`).
+- **In-app notifications:** topbar bell across the student/company/institution portals, emitted on the events that matter (contact reveal, verification decision, interview result, account approval).
+- **Rate limiting:** global throttle (120/min/IP) with tighter per-route budgets on auth endpoints; webhooks/health exempt.
+- **Secrets:** `pnpm gen:secrets` mints prod values; the API fail-fasts in production if a secret is missing or left at its dev default.
 
 ## Background jobs (BullMQ)
 
@@ -118,18 +140,20 @@ pnpm db:generate  # generate Prisma client
 pnpm db:migrate   # apply migrations
 pnpm db:seed      # seed catalog data + demo users
 pnpm db:studio    # open Prisma Studio
+pnpm make:admin   # promote a user to PLATFORM_ADMIN
+pnpm gen:secrets  # print fresh JWT / NextAuth / encryption secrets for prod
 ```
 
-## Phase 1 acceptance (from spec §12)
+## Deployment
 
-- [ ] M0 — Foundation: monorepo boots, DB seeded
-- [ ] M1 — Auth: sign up + sign in via Google/GitHub/email
-- [ ] M2 — Profile + resume parsing + public portfolio
-- [ ] M3 — Skills + L1/L2 verifications
-- [ ] M4 — GitHub integration + L3
-- [ ] M5 — Practice IDE (Monaco + Judge0 + AI feedback)
-- [ ] M6 — Leaderboard + Community + Notifications + polish
+A free-tier, no-credit-card stack (Vercel + Render + Neon + Upstash + Cloudflare R2)
+is documented step-by-step in [`DEPLOY.md`](DEPLOY.md). Infra-as-code lives in
+[`render.yaml`](render.yaml) (API + env) and [`apps/web/vercel.json`](apps/web/vercel.json)
+(web). CI runs lint/typecheck/unit/e2e on every push; [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+adds opt-in, test-gated deploys.
 
-## Out of scope (Phase 2+)
+## Roadmap (not yet built)
 
-Recruiter, Institution, Interviewer, and Platform-Admin portals. Schema is already in place — only endpoints are gated. Don't build them in this phase.
+- **Content depth** — expand the practice library toward 200–300 problems per domain.
+- **DigiLocker** — real Govt-of-India OAuth (currently a `503` stub until onboarding).
+- **Richer competitions** — multi-round, jury-scored contests.
