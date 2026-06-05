@@ -62,6 +62,15 @@ export default function IntegrationsPage() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  // Surface the result when DigiLocker redirects back, then clean the URL.
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get('digilocker');
+    if (!status) return;
+    if (status === 'linked') toast.success('DigiLocker linked.');
+    else toast.error("Couldn't link DigiLocker. Please try again.");
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
   const sync = useMutation({
     mutationFn: (provider: string) =>
       api(`/integrations/${provider}/sync`, { method: 'POST', token }),

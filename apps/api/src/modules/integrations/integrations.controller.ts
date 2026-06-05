@@ -4,14 +4,16 @@ import {
   Controller,
   Delete,
   Get,
-  HttpException,
-  HttpStatus,
   Param,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { IntegrationsService, type IntegrationProvider } from './integrations.service';
+import { DigiLockerService } from './digilocker.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import type { JwtPayload } from '@skillverify/shared';
 
 const KNOWN: IntegrationProvider[] = ['github', 'linkedin', 'leetcode', 'coursera'];
@@ -24,7 +26,10 @@ function assertProvider(p: string): asserts p is IntegrationProvider {
 
 @Controller('integrations')
 export class IntegrationsController {
-  constructor(private readonly svc: IntegrationsService) {}
+  constructor(
+    private readonly svc: IntegrationsService,
+    private readonly digilocker: DigiLockerService,
+  ) {}
 
   @Get()
   list(@CurrentUser() u: JwtPayload) {
@@ -72,28 +77,34 @@ export class IntegrationsController {
   }
 
   /**
-   * DigiLocker stub. The real flow requires Govt-of-India onboarding +
-   * issued client_id/secret. Until DIGILOCKER_CLIENT_ID is set in env, we
-   * surface a clear 503 so the frontend can show "Coming soon".
-   * When set, returns the OAuth authorize URL the user should be redirected
-   * to (TODO: actual token exchange in a follow-up).
+   * DigiLocker (MeriPehchaan) OAuth — step 1. Returns the authorize URL to
+   * redirect the user to. 503s until DIGILOCKER_CLIENT_ID/SECRET are set
+   * (Govt-of-India onboarding), so the frontend shows "Coming soon".
    */
   @Post('digilocker/connect')
   digiLockerConnect(@CurrentUser() u: JwtPayload) {
-    const clientId = process.env.DIGILOCKER_CLIENT_ID;
-    if (!clientId) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
-          message: 'DigiLocker integration is pending Govt-of-India API onboarding. Stay tuned.',
-        },
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
+    return this.digilocker.buildAuthorizeUrl(u.sub);
+  }
+
+  /**
+   * DigiLocker OAuth — step 2. DigiLocker redirects the user's browser here
+   * with ?code&state. Public (no JWT on a provider redirect); the CSRF `state`
+   * recovers the user. Exchanges the code, then bounces back to the dashboard.
+   */
+  @Public()
+  @Get('digilocker/callback')
+  async digiLockerCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
+    const appUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+    try {
+      if (!code || !state) throw new BadRequestException('Missing code/state');
+      await this.digilocker.handleCallback(code, state);
+      return res.redirect(`${appUrl}/dashboard/integrations?digilocker=linked`);
+    } catch {
+      return res.redirect(`${appUrl}/dashboard/integrations?digilocker=error`);
     }
-    const redirectUri = `${process.env.API_PUBLIC_URL ?? 'http://localhost:4000'}/api/v1/integrations/digilocker/callback`;
-    // DigiLocker uses standard OAuth 2.0; state should be a signed token in prod.
-    const state = u.sub;
-    const url = `https://api.digitallocker.gov.in/public/oauth2/1/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
-    return { url };
   }
 }
