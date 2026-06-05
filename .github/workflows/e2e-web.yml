@@ -1,0 +1,50 @@
+name: Web E2E (Playwright)
+
+# Public-page smoke tests — no API/DB needed. Separate from the main CI so it
+# can install browsers without slowing every lint/typecheck/unit run.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CI: 'true'
+  NEXT_PUBLIC_API_URL: http://localhost:4000
+  NEXTAUTH_URL: http://localhost:3000
+  NEXTAUTH_SECRET: ci-playwright-secret
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Web build resolves workspace deps; generate the Prisma client + build
+      # shared so `next build` (run by Playwright's webServer) succeeds.
+      - run: pnpm --filter @skillverify/db generate
+      - run: pnpm --filter @skillverify/shared build
+
+      - name: Install Playwright browser
+        run: pnpm --filter @skillverify/web exec playwright install --with-deps chromium
+
+      - name: Run public smoke tests
+        run: pnpm --filter @skillverify/web test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

@@ -59,3 +59,8 @@ test-resume.pdf
 *_PLAN.md
 TRACK_*.md
 RECREATE_PROMPT.md
+
+# Playwright
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/.playwright/

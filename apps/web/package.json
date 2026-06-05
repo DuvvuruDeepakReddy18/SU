@@ -10,7 +10,8 @@
     "start:local": "dotenv -e ../../.env -- next start -p 3000",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -57,7 +58,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.1",
+    "@playwright/test": "^1.60.0",
     "@skillverify/db": "workspace:*",
     "@types/bcrypt": "^5.0.2",
     "@types/leaflet": "^1.9.21",
