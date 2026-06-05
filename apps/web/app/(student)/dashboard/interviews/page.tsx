@@ -27,7 +27,10 @@ type Booking = {
   notes: string | null;
   result: string | null;
   meetingUrl: string | null;
+  skillName: string | null;
 };
+
+type EligibleSkill = { skillId: string; name: string };
 
 // Time slots offered each day (08:00–20:00 hourly).
 const SLOTS = Array.from({ length: 13 }, (_, i) => i + 8); // 8..20
@@ -46,6 +49,7 @@ export default function InterviewsPage() {
     return d;
   });
   const [selectedSlot, setSelectedSlot] = useState<Date | null>(null);
+  const [selectedSkillId, setSelectedSkillId] = useState('');
   const [notes, setNotes] = useState('');
 
   const { data: bookings } = useQuery({
@@ -54,22 +58,34 @@ export default function InterviewsPage() {
     queryFn: () => api<Booking[]>('/interviews', { token }),
   });
 
+  const { data: eligibleSkills } = useQuery({
+    enabled: !!token && showPicker,
+    queryKey: ['interviews.eligible-skills'],
+    queryFn: () => api<EligibleSkill[]>('/interviews/eligible-skills', { token }),
+  });
+
+  function resetPicker() {
+    setShowPicker(false);
+    setSelectedSlot(null);
+    setSelectedSkillId('');
+    setNotes('');
+    qc.invalidateQueries({ queryKey: ['interviews.me'] });
+  }
+
   const book = useMutation({
     mutationFn: () =>
       api<Booking>('/interviews', {
         method: 'POST',
         token,
         body: JSON.stringify({
+          skillId: selectedSkillId,
           scheduledAt: selectedSlot!.toISOString(),
           notes,
         }),
       }),
     onSuccess: () => {
       toast.success('L4 interview booked — meeting link inside');
-      setShowPicker(false);
-      setSelectedSlot(null);
-      setNotes('');
-      qc.invalidateQueries({ queryKey: ['interviews.me'] });
+      resetPicker();
     },
     onError: (e) => toast.error((e as Error).message),
   });
@@ -96,7 +112,11 @@ export default function InterviewsPage() {
       }>('/interviews/payments/order', {
         method: 'POST',
         token,
-        body: JSON.stringify({ scheduledAt: selectedSlot.toISOString(), notes }),
+        body: JSON.stringify({
+          scheduledAt: selectedSlot.toISOString(),
+          notes,
+          skillId: selectedSkillId,
+        }),
       });
 
       await loadRazorpayScript();
@@ -123,13 +143,11 @@ export default function InterviewsPage() {
                 signature: response.razorpay_signature,
                 scheduledAt: selectedSlot.toISOString(),
                 notes,
+                skillId: selectedSkillId,
               }),
             });
             toast.success('Payment received — interview booked.');
-            setShowPicker(false);
-            setSelectedSlot(null);
-            setNotes('');
-            qc.invalidateQueries({ queryKey: ['interviews.me'] });
+            resetPicker();
           } catch (e) {
             toast.error(`Booking failed after payment: ${(e as Error).message}`);
           }
@@ -206,6 +224,36 @@ export default function InterviewsPage() {
                 Duration: 45-60 min · Format: Video Call (Jitsi, link auto-generated) · Panel: 2
                 Experts · Result: Pass = L4 Verified
               </p>
+
+              {/* Skill to verify */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Skill to verify</label>
+                {eligibleSkills && eligibleSkills.length === 0 ? (
+                  <p className="rounded border border-dashed p-3 text-xs text-muted-foreground">
+                    No eligible skills yet. An expert interview verifies a skill from L3 (Proven) to
+                    L4 (Expert) — prove a skill to L3 first (projects + verified certs), then come
+                    back to book.
+                  </p>
+                ) : (
+                  <>
+                    <select
+                      value={selectedSkillId}
+                      onChange={(e) => setSelectedSkillId(e.target.value)}
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="">Select a skill…</option>
+                      {eligibleSkills?.map((s) => (
+                        <option key={s.skillId} value={s.skillId}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-muted-foreground">
+                      Only your L3-proven skills can be taken to L4.
+                    </p>
+                  </>
+                )}
+              </div>
 
               {/* Week navigation */}
               <div className="flex items-center justify-between">
@@ -314,12 +362,21 @@ export default function InterviewsPage() {
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Focus areas (e.g. system design + Python) — optional"
                   />
+                  {!selectedSkillId && (
+                    <p className="text-[11px] text-amber-600">Pick a skill to verify above.</p>
+                  )}
                   {config.razorpay ? (
-                    <Button onClick={() => payAndBook()} disabled={paying || book.isPending}>
+                    <Button
+                      onClick={() => payAndBook()}
+                      disabled={paying || book.isPending || !selectedSkillId}
+                    >
                       {paying ? 'Opening checkout…' : 'Pay & book'}
                     </Button>
                   ) : (
-                    <Button onClick={() => book.mutate()} disabled={book.isPending}>
+                    <Button
+                      onClick={() => book.mutate()}
+                      disabled={book.isPending || !selectedSkillId}
+                    >
                       Confirm booking
                     </Button>
                   )}
@@ -346,14 +403,21 @@ export default function InterviewsPage() {
                       <div className="flex items-center gap-3">
                         <Video className="h-4 w-4 text-primary" />
                         <div>
-                          <div className="font-medium text-sm">
-                            {new Date(b.scheduledAt).toLocaleString('en-IN', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-sm">
+                              {new Date(b.scheduledAt).toLocaleString('en-IN', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                            {b.skillName && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                {b.skillName}
+                              </Badge>
+                            )}
                           </div>
                           {b.notes && (
                             <div className="text-xs text-muted-foreground">{b.notes}</div>
@@ -373,14 +437,12 @@ export default function InterviewsPage() {
                       </Badge>
                     </div>
                     {b.status === 'scheduled' && b.meetingUrl && (
-                      <a
-                        href={b.meetingUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        Join meeting <ExternalLink className="h-3 w-3" />
-                      </a>
+                      <Button asChild size="sm" variant="outline" className="h-8">
+                        <a href={b.meetingUrl} target="_blank" rel="noreferrer">
+                          <Video className="h-3.5 w-3.5" /> Join meeting{' '}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
                     )}
                   </li>
                 ))}

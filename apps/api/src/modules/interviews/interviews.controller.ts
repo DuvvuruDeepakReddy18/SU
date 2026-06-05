@@ -8,11 +8,15 @@ import {
   Post,
   UseInterceptors,
 } from '@nestjs/common';
+import { createZodDto, ZodValidationPipe } from 'nestjs-zod';
+import { BookInterviewSchema } from '@skillverify/shared';
 import { InterviewsService } from './interviews.service';
 import { RazorpayService } from './razorpay.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { IdempotencyInterceptor } from '../../common/interceptors/idempotency.interceptor';
 import type { JwtPayload } from '@skillverify/shared';
+
+class BookInterviewDto extends createZodDto(BookInterviewSchema) {}
 
 @Controller('interviews')
 export class InterviewsController {
@@ -26,14 +30,16 @@ export class InterviewsController {
     return this.svc.list(u.sub);
   }
 
+  /** Skills the student can book an L4 interview for (their L3-proven skills). */
+  @Get('eligible-skills')
+  eligibleSkills(@CurrentUser() u: JwtPayload) {
+    return this.svc.eligibleSkills(u.sub);
+  }
+
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
-  book(
-    @CurrentUser() u: JwtPayload,
-    @Body() body: { skillId?: string; scheduledAt: string; notes?: string },
-  ) {
-    if (!body?.scheduledAt) throw new BadRequestException('scheduledAt required');
-    return this.svc.book(u.sub, body);
+  book(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: BookInterviewDto) {
+    return this.svc.book(u.sub, dto);
   }
 
   @Delete(':id')
