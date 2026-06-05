@@ -66,6 +66,9 @@ export class AuthController {
   // Files land under `temp/college-ids/` so they're easy to GC if signup
   // is abandoned.
   @Public()
+  // Unauthenticated 10 MB upload — keep this well below the global budget so it
+  // can't be used to flood storage. A real signup needs only a couple of tries.
+  @Throttle({ default: { limit: 8, ttl: 60_000 } })
   @Post('upload-college-id')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadCollegeId(@UploadedFile() file: Express.Multer.File) {
