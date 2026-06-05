@@ -9,4 +9,5 @@ export * from './recruiter';
 export * from './institution-admin';
 export * from './interviewer';
 export * from './interview';
+export * from './competition';
 export * from './account';

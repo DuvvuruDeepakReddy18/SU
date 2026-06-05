@@ -74,6 +74,8 @@ model User {
   placementApplications PlacementApplication[]
   postedCompetitions    Competition[]    @relation("PostedCompetitions")
   competitionEntries    CompetitionEntry[]
+  judgedScores          RoundScore[]       @relation("JudgedScores")
+  judgePanels           CompetitionJudge[] @relation("JudgePanels")
   providedServices         FreelanceService[]  @relation("ProvidedServices")
   freelanceInquiriesAsClient   FreelanceInquiry[] @relation("FreelanceInquiriesAsClient")
   freelanceInquiriesAsProvider FreelanceInquiry[] @relation("FreelanceInquiriesAsProvider")
@@ -589,6 +591,8 @@ model Competition {
   institutionId String?
   institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
   entries     CompetitionEntry[]
+  rounds      CompetitionRound[]
+  judges      CompetitionJudge[]
   createdAt   DateTime @default(now())
 
   @@index([category, startsAt])
@@ -604,9 +608,59 @@ model CompetitionEntry {
   submissionUrl String?
   notes         String?
   rank          Int?
+  roundScores   RoundScore[]
   createdAt     DateTime    @default(now())
 
   @@unique([competitionId, userId])
+}
+
+// ---------- Multi-round, jury-scored competitions ----------
+// A competition can have N ordered rounds. A jury panel (CompetitionJudge)
+// scores each entry per round (RoundScore); the round leaderboard ranks
+// entries by their average jury score, and the top `advanceCount` advance.
+
+model CompetitionRound {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  name          String
+  sequence      Int // 1-based ordering within the competition
+  status        String      @default("upcoming") // "upcoming" | "active" | "closed"
+  advanceCount  Int? // how many top entries advance from this round (null = all/final)
+  scores        RoundScore[]
+  createdAt     DateTime    @default(now())
+
+  @@unique([competitionId, sequence])
+  @@index([competitionId])
+}
+
+model CompetitionJudge {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation("JudgePanels", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([competitionId, userId])
+}
+
+model RoundScore {
+  id        String           @id @default(cuid())
+  roundId   String
+  round     CompetitionRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  entryId   String
+  entry     CompetitionEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  judgeId   String
+  judge     User             @relation("JudgedScores", fields: [judgeId], references: [id], onDelete: Cascade)
+  score     Int // 0..100
+  feedback  String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // One score per judge per entry per round (re-scoring updates in place).
+  @@unique([roundId, entryId, judgeId])
+  @@index([roundId])
 }
 
 // ---------- Audit log for human-reviewer / admin actions ----------
