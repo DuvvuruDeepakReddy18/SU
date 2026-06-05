@@ -18,6 +18,10 @@ import {
   OAuthSyncDto,
   RecruiterSignupDto,
   InstitutionAdminSignupDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ChangePasswordDto,
+  VerifyEmailDto,
 } from './dto';
 import { StorageService } from '../../infra/storage/storage.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -97,6 +101,45 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: JwtPayload) {
     return this.auth.me(user.sub);
+  }
+
+  // ---------- Email verification ----------
+
+  @Public()
+  @HttpCode(200)
+  @Post('verify-email')
+  verifyEmail(@Body(ZodValidationPipe) dto: VerifyEmailDto) {
+    return this.auth.verifyEmail(dto.token);
+  }
+
+  @HttpCode(200)
+  @Post('resend-verification')
+  resendVerification(@CurrentUser() user: JwtPayload) {
+    return this.auth.resendVerification(user.sub);
+  }
+
+  // ---------- Password reset (public) ----------
+
+  @Public()
+  @HttpCode(200)
+  @Post('forgot-password')
+  forgotPassword(@Body(ZodValidationPipe) dto: ForgotPasswordDto) {
+    return this.auth.forgotPassword(dto.email);
+  }
+
+  @Public()
+  @HttpCode(200)
+  @Post('reset-password')
+  resetPassword(@Body(ZodValidationPipe) dto: ResetPasswordDto) {
+    return this.auth.resetPassword(dto.token, dto.password);
+  }
+
+  // ---------- Change password (authenticated) ----------
+
+  @HttpCode(200)
+  @Post('change-password')
+  changePassword(@CurrentUser() user: JwtPayload, @Body(ZodValidationPipe) dto: ChangePasswordDto) {
+    return this.auth.changePassword(user.sub, dto.currentPassword, dto.newPassword);
   }
 
   // Self-serve account closure. Soft-delete only — see auth.service for why.

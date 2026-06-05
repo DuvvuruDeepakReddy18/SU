@@ -310,6 +310,44 @@ export function interviewerInvitedEmail(input: {
   };
 }
 
+export function verifyEmailEmail(input: { name: string; url: string }) {
+  return {
+    subject: 'Verify your SkillVerify email',
+    html: shell({
+      previewText: 'Confirm your email to finish setting up your account.',
+      bodyHtml: `
+        <h1 style="font-size:22px;margin:0 0 12px;">Hi ${escape(input.name)},</h1>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 16px;color:#374151;">
+          Please confirm this is your email so we can keep your SkillVerify account secure.
+        </p>
+        <p style="margin:0 0 20px;">${ctaButton('Verify email', input.url)}</p>
+        <p style="font-size:13px;line-height:1.55;color:#6b7280;margin:0;">
+          This link expires in 24 hours. If you didn't create a SkillVerify account, you can safely
+          ignore this email.
+        </p>`,
+    }),
+  };
+}
+
+export function passwordResetEmail(input: { name: string; url: string }) {
+  return {
+    subject: 'Reset your SkillVerify password',
+    html: shell({
+      previewText: 'Use this link to set a new password.',
+      bodyHtml: `
+        <h1 style="font-size:22px;margin:0 0 12px;">Hi ${escape(input.name)},</h1>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 16px;color:#374151;">
+          We received a request to reset your password. Click below to choose a new one.
+        </p>
+        <p style="margin:0 0 20px;">${ctaButton('Reset password', input.url)}</p>
+        <p style="font-size:13px;line-height:1.55;color:#6b7280;margin:0;">
+          This link expires in 1 hour. If you didn't request this, ignore this email — your password
+          won't change.
+        </p>`,
+    }),
+  };
+}
+
 export function recruiterRejectedEmail(input: { name: string; reason: string | null }) {
   return {
     subject: 'SkillVerify recruiter account — not approved',

@@ -86,8 +86,26 @@ model User {
   savedCandidates          SavedCandidate[]   @relation("SavedByRecruiter")
   savedAsCandidate         SavedCandidate[]   @relation("SavedAsCandidate")
   institutionAdminProfile  InstitutionAdminProfile?
+  authTokens               AuthToken[]
 
   @@index([institutionId])
+}
+
+// Single-use, hashed tokens for email verification + password reset. The raw
+// token is emailed; only its SHA-256 hash is stored, so a DB leak can't be
+// used to verify or reset accounts.
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // "email_verify" | "password_reset"
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, type])
+  @@index([expiresAt])
 }
 
 model Institution {

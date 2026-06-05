@@ -13,6 +13,8 @@ import {
   institutionAdminApprovedEmail,
   institutionAdminRejectedEmail,
   interviewerInvitedEmail,
+  verifyEmailEmail,
+  passwordResetEmail,
   welcomeEmail,
 } from './email.templates';
 
@@ -143,6 +145,16 @@ export class EmailService {
 
   async sendInterviewerInvited(to: string, name: string, tempPassword: string) {
     const { subject, html } = interviewerInvitedEmail({ name, email: to, tempPassword });
+    await this.send(to, subject, html);
+  }
+
+  async sendVerifyEmail(to: string, name: string, url: string) {
+    const { subject, html } = verifyEmailEmail({ name, url });
+    await this.send(to, subject, html);
+  }
+
+  async sendPasswordReset(to: string, name: string, url: string) {
+    const { subject, html } = passwordResetEmail({ name, url });
     await this.send(to, subject, html);
   }
 }

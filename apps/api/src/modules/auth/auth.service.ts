@@ -18,7 +18,10 @@ import { StorageService } from '../../infra/storage/storage.service';
 import { QueueService } from '../../infra/queue/queue.service';
 import { QUEUE_NAMES, VERIFICATION_JOBS } from '../../infra/queue/queue.constants';
 import { EmailService } from '../../infra/email/email.service';
+import { AuthTokenService } from './auth-token.service';
 import type { OAuthSyncDto } from './dto';
+
+const APP_URL = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
 
 @Injectable()
 export class AuthService {
@@ -28,6 +31,7 @@ export class AuthService {
     private readonly storage: StorageService,
     private readonly queue: QueueService,
     private readonly email: EmailService,
+    private readonly tokens: AuthTokenService,
   ) {}
 
   async signup(input: SignupInput) {
@@ -102,9 +106,10 @@ export class AuthService {
       { jobId: `screen-college-id-${user.id}` },
     );
 
-    // Welcome email — fire-and-forget; EmailService swallows its own errors,
-    // so a Resend outage never breaks signup.
+    // Welcome + email-verification — fire-and-forget; EmailService swallows
+    // its own errors, so a Resend outage never breaks signup.
     void this.email.sendWelcome(user.email, input.governmentName);
+    void this.sendVerificationEmail(user.id, user.email, input.governmentName);
 
     return this.issueTokens(user);
   }
@@ -150,6 +155,7 @@ export class AuthService {
       return u;
     });
 
+    void this.sendVerificationEmail(user.id, user.email, input.fullName);
     return this.issueTokens(user);
   }
 
@@ -189,7 +195,98 @@ export class AuthService {
       return u;
     });
 
+    void this.sendVerificationEmail(user.id, user.email, input.fullName);
     return this.issueTokens(user);
+  }
+
+  // ---------- Email verification ----------
+
+  /** Issue an email-verify token and send the link. Fire-and-forget safe. */
+  private async sendVerificationEmail(userId: string, email: string, name: string) {
+    try {
+      const raw = await this.tokens.issue(userId, 'email_verify', 24 * 60);
+      const url = `${APP_URL}/verify-email?token=${encodeURIComponent(raw)}`;
+      await this.email.sendVerifyEmail(email, name, url);
+    } catch {
+      // Never let email issues break the surrounding action.
+    }
+  }
+
+  /** Consume a verify token → stamp emailVerified. Idempotent-ish. */
+  async verifyEmail(token: string) {
+    const userId = await this.tokens.consume('email_verify', token);
+    if (!userId) throw new BadRequestException('This verification link is invalid or has expired.');
+    await this.prisma.user.update({ where: { id: userId }, data: { emailVerified: new Date() } });
+    return { ok: true };
+  }
+
+  /** Re-send the verification email to the signed-in user. */
+  async resendVerification(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.deletedAt) throw new BadRequestException('Account not found.');
+    if (user.emailVerified) return { ok: true, alreadyVerified: true };
+    const name = await this.displayName(userId, user.email);
+    await this.sendVerificationEmail(userId, user.email, name);
+    return { ok: true };
+  }
+
+  // ---------- Password reset ----------
+
+  /**
+   * Always returns ok (never reveals whether the email exists). When it does,
+   * issues a reset token + emails the link.
+   */
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (user && !user.deletedAt && user.passwordHash) {
+      try {
+        const raw = await this.tokens.issue(user.id, 'password_reset', 60);
+        const url = `${APP_URL}/reset-password?token=${encodeURIComponent(raw)}`;
+        const name = await this.displayName(user.id, user.email);
+        await this.email.sendPasswordReset(user.email, name, url);
+      } catch {
+        // swallow — don't leak failure timing
+      }
+    }
+    return { ok: true };
+  }
+
+  /** Consume a reset token → set a new password. */
+  async resetPassword(token: string, newPassword: string) {
+    const userId = await this.tokens.consume('password_reset', token);
+    if (!userId) throw new BadRequestException('This reset link is invalid or has expired.');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { ok: true };
+  }
+
+  /** Change password for a signed-in user (requires the current password). */
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestException('Account not found.');
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'Your account has no password (you signed in with Google/GitHub). Use "Forgot password" to set one.',
+      );
+    }
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) throw new BadRequestException('Current password is incorrect.');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { ok: true };
+  }
+
+  /** Best-effort human name for emails across profile types. */
+  private async displayName(userId: string, fallback: string): Promise<string> {
+    const [student, recruiter, tpo] = await Promise.all([
+      this.prisma.studentProfile.findUnique({ where: { userId }, select: { fullName: true } }),
+      this.prisma.recruiterProfile.findUnique({ where: { userId }, select: { fullName: true } }),
+      this.prisma.institutionAdminProfile.findUnique({
+        where: { userId },
+        select: { fullName: true },
+      }),
+    ]);
+    return student?.fullName ?? recruiter?.fullName ?? tpo?.fullName ?? fallback;
   }
 
   async login(input: { email: string; password: string }) {

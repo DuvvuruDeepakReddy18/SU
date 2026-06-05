@@ -166,6 +166,77 @@ describe('signup → login → me', () => {
     expect(res.body.email).toBe(loginEmail);
     expect(res.body.studentProfile?.governmentName).toBe('E2E Test Student');
   });
+
+  // ---- account essentials: verify / reset / change password ----
+  // These run after /auth/me and intentionally mutate the same user. The
+  // change-password test is last because it rotates the credential.
+
+  it('forgot-password always returns ok (no account enumeration)', async () => {
+    // Known email.
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/forgot-password`)
+      .send({ email: loginEmail })
+      .expect(200)
+      .expect((r) => expect(r.body.ok).toBe(true));
+    // Unknown email — must look identical to the caller.
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/forgot-password`)
+      .send({ email: `nobody+${RUN_ID}@example.com` })
+      .expect(200)
+      .expect((r) => expect(r.body.ok).toBe(true));
+  });
+
+  it('verify-email / reset-password reject bogus tokens with 400', async () => {
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/verify-email`)
+      .send({ token: `bogus-${RUN_ID}` })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/reset-password`)
+      .send({ token: `bogus-${RUN_ID}`, password: 'new-Password-456' })
+      .expect(400);
+  });
+
+  it('resend-verification needs auth (401 without token)', async () => {
+    await request(app.getHttpServer()).post(`${PREFIX}/auth/resend-verification`).expect(401);
+  });
+
+  it('resend-verification returns ok for the signed-in user', async () => {
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/resend-verification`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200)
+      .expect((r) => expect(r.body.ok).toBe(true));
+  });
+
+  it('change-password rejects a wrong current password with 400', async () => {
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/change-password`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ currentPassword: 'definitely-wrong', newPassword: 'new-Password-456' })
+      .expect(400);
+  });
+
+  it('change-password rotates the credential (old fails, new works)', async () => {
+    const newPassword = 'new-Password-456';
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/change-password`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ currentPassword: password, newPassword })
+      .expect(200);
+
+    // Old password no longer logs in.
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/login`)
+      .send({ email: loginEmail, password })
+      .expect(401);
+
+    // New password does.
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/auth/login`)
+      .send({ email: loginEmail, password: newPassword })
+      .expect(200);
+  });
 });
 
 describe('public portfolio', () => {

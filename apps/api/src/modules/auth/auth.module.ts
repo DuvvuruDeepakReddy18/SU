@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthTokenService } from './auth-token.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -20,6 +21,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthTokenService,
     JwtStrategy,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

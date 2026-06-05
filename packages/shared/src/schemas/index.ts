@@ -8,3 +8,4 @@ export * from './community';
 export * from './recruiter';
 export * from './institution-admin';
 export * from './interviewer';
+export * from './account';

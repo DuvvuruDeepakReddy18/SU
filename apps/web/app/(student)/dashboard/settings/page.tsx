@@ -15,6 +15,38 @@ export default function SettingsPage() {
   const token = (data as any)?.accessToken as string | undefined;
   const [confirm, setConfirm] = useState('');
 
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const changePassword = useMutation({
+    mutationFn: () =>
+      api('/auth/change-password', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
+    onSuccess: () => {
+      toast.success('Password updated.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  function submitPasswordChange() {
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match.');
+      return;
+    }
+    changePassword.mutate();
+  }
+
   const deleteAccount = useMutation({
     mutationFn: () => api('/auth/me', { method: 'DELETE', token }),
     onSuccess: () => {
@@ -36,6 +68,48 @@ export default function SettingsPage() {
           </div>
           <Button variant="destructive" onClick={() => signOut({ callbackUrl: '/' })}>
             Sign out
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Change password</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground">
+            If you signed in with Google or GitHub and never set a password, use{' '}
+            <a className="text-primary hover:underline" href="/forgot-password">
+              Forgot password
+            </a>{' '}
+            instead.
+          </p>
+          <Input
+            type="password"
+            placeholder="Current password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className="max-w-xs"
+          />
+          <Input
+            type="password"
+            placeholder="New password (min 8 characters)"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="max-w-xs"
+          />
+          <Input
+            type="password"
+            placeholder="Confirm new password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="max-w-xs"
+          />
+          <Button
+            disabled={!currentPassword || !newPassword || changePassword.isPending}
+            onClick={submitPasswordChange}
+          >
+            {changePassword.isPending ? 'Updating…' : 'Update password'}
           </Button>
         </CardContent>
       </Card>
