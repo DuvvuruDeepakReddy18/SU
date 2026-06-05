@@ -14,8 +14,8 @@ import { InstitutionShell } from '@/components/institution/institution-shell';
 export default async function InstitutionLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const role = (session as any)?.role as string | undefined;
+
+  const role = session?.role as string | undefined;
   if (role !== 'INSTITUTION_ADMIN') redirect('/dashboard');
 
   return <InstitutionShell>{children}</InstitutionShell>;

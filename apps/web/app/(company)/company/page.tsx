@@ -11,8 +11,8 @@ type Saved = { savedAt: string }[];
 
 export default function CompanyHomePage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
 
   const { data: saved } = useQuery({
     enabled: !!token,

@@ -28,8 +28,8 @@ export default function LoginPage() {
     // Route by role — recruiters → company portal, institution admins →
     // institution portal, everyone else → student dashboard.
     const session = await getSession();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const role = (session as any)?.role as string | undefined;
+
+    const role = session?.role as string | undefined;
     router.push(
       role === 'RECRUITER'
         ? '/company'

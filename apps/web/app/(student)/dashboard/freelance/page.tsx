@@ -89,8 +89,8 @@ function stubRating(id: string): { score: number; count: number } {
 
 export default function FreelancePage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const myUserId = (session as any)?.user?.id as string | undefined;
   const qc = useQueryClient();

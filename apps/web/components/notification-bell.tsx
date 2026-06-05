@@ -37,8 +37,8 @@ function timeAgo(iso: string): string {
  */
 export function NotificationBell() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const router = useRouter();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);

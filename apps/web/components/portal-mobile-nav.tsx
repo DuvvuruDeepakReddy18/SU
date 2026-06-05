@@ -3,39 +3,34 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { useQuery } from '@tanstack/react-query';
-import { Menu, X, Settings } from 'lucide-react';
-import { api } from '@/lib/api';
+import { signOut } from 'next-auth/react';
+import { Menu, X, LogOut, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NAV } from '@/components/sidebar';
+
+export type PortalNavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+};
 
 /**
- * Burger-triggered drawer that mirrors the desktop sidebar on small screens.
- * The desktop <aside> is `hidden md:flex`, so without this students on phones
- * have no navigation at all once they're past the dashboard home. Renders
- * only at `< md` (md:hidden).
+ * Burger-triggered drawer for the recruiter / institution / interviewer portals.
+ * Their desktop <aside> is `hidden md:flex`, so without this there's no
+ * navigation at all on phones. Renders only at `< md` (md:hidden) and mirrors
+ * the same nav array + active-matching the sidebar uses.
  */
-export function MobileNav() {
+export function PortalMobileNav({ nav, brand }: { nav: PortalNavItem[]; brand: string }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const home = nav[0]?.href ?? '/';
 
-  const token = session?.accessToken as string | undefined;
-
-  const { data: unread } = useQuery({
-    enabled: !!token,
-    queryKey: ['messages.unread'],
-    queryFn: () => api<{ count: number }>('/messages/unread-count', { token }),
-    refetchInterval: 60_000,
-  });
-
-  // Close on route change.
+  // Close on navigation.
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Lock body scroll while drawer is open.
+  // Lock body scroll while the drawer is open.
   useEffect(() => {
     if (!open) return;
     const original = document.body.style.overflow;
@@ -66,8 +61,11 @@ export function MobileNav() {
           />
           <aside className="absolute inset-y-0 left-0 flex w-[80%] max-w-[280px] flex-col border-r bg-background shadow-xl animate-in slide-in-from-left">
             <div className="flex items-center justify-between px-5 py-4">
-              <Link href="/dashboard" className="font-semibold text-lg">
+              <Link href={home} className="font-semibold text-lg">
                 <span className="text-primary">Skill</span>Verify
+                <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[10px] align-middle text-muted-foreground">
+                  {brand}
+                </span>
               </Link>
               <button
                 type="button"
@@ -78,12 +76,12 @@ export function MobileNav() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <nav className="flex-1 space-y-1 px-2 overflow-y-auto">
-              {NAV.map((item) => {
-                const prefixes = item.matchPrefixes ?? [item.href];
-                const active = prefixes.some((p) => pathname === p || pathname.startsWith(p + '/'));
+            <nav className="flex-1 space-y-1 overflow-y-auto px-2">
+              {nav.map((item) => {
+                const active = item.exact
+                  ? pathname === item.href
+                  : pathname === item.href || pathname.startsWith(item.href + '/');
                 const Icon = item.icon;
-                const badge = item.badgeKey === 'messages' ? (unread?.count ?? 0) : 0;
                 return (
                   <Link
                     key={item.href}
@@ -96,28 +94,18 @@ export function MobileNav() {
                     )}
                   >
                     <Icon className="h-4 w-4" />
-                    <span className="flex-1">{item.label}</span>
-                    {badge > 0 && (
-                      <span className="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold px-1">
-                        {badge > 99 ? '99+' : badge}
-                      </span>
-                    )}
+                    {item.label}
                   </Link>
                 );
               })}
             </nav>
-            <Link
-              href="/dashboard/settings"
-              className={cn(
-                'mx-2 mb-4 flex items-center gap-3 rounded-md px-3 py-3 text-sm transition-colors',
-                pathname.startsWith('/dashboard/settings')
-                  ? 'bg-secondary text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60',
-              )}
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="mx-2 mb-4 flex items-center gap-3 rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-secondary/60"
             >
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </Link>
+              <LogOut className="h-4 w-4" /> Sign out
+            </button>
           </aside>
         </div>
       )}

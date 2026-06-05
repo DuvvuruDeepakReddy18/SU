@@ -33,8 +33,8 @@ const JOB_TYPES = ['full_time', 'internship', 'contract', 'ppo'];
 
 export default function JobsPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({

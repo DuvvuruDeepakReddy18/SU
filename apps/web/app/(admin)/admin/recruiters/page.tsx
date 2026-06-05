@@ -25,8 +25,8 @@ type PendingRecruiter = {
 
 export default function PendingRecruitersPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState('');

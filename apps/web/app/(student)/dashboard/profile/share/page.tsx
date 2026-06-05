@@ -39,8 +39,8 @@ const THEME_PREVIEWS: Record<ShareTheme, { bg: string; text: string }> = {
 
 export default function SharePage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
 
   const { data: profile } = useQuery({

@@ -22,8 +22,8 @@ const LAYER_FILTERS = [
 
 export default function CandidatesPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
 
   const [q, setQ] = useState('');

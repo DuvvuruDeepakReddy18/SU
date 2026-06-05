@@ -29,8 +29,8 @@ type LeaderboardRow = {
 export function ProblemLeaderboard({ slug }: { slug: string }) {
   const [scope, setScope] = useState<'global' | 'institute'>('global');
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
 
   const { data: profile } = useQuery({
     enabled: !!token,

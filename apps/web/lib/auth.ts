@@ -66,12 +66,9 @@ export const authOptions: NextAuthOptions = {
             user: { id: string; role: string };
           };
           // Stash the API JWT on the user object so the jwt callback can persist it.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (user as any).accessToken = data.accessToken;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (user as any).id = data.user.id;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (user as any).role = data.user.role;
+          user.accessToken = data.accessToken;
+          user.id = data.user.id;
+          user.role = data.user.role;
           return true;
         } catch {
           return false;
@@ -81,22 +78,16 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user }) {
       if (user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        token.accessToken = (user as any).accessToken;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        token.userId = (user as any).id;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        token.role = (user as any).role;
+        token.accessToken = user.accessToken;
+        token.userId = user.id;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (session as any).accessToken = token.accessToken;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (session as any).userId = token.userId;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (session as any).role = token.role;
+      session.accessToken = token.accessToken;
+      session.userId = token.userId;
+      session.role = token.role;
       return session;
     },
   },

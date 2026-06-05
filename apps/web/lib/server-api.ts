@@ -6,13 +6,13 @@ import { api } from './api';
 
 export async function serverApi<T = unknown>(path: string, init?: RequestInit): Promise<T> {
   const session = await getServerSession(authOptions);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   return api<T>(path, { ...init, token });
 }
 
 export async function serverToken(): Promise<string | null> {
   const session = await getServerSession(authOptions);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((session as any)?.accessToken as string | undefined) ?? null;
+
+  return (session?.accessToken as string | undefined) ?? null;
 }

@@ -14,8 +14,8 @@ import { CompanyShell } from '@/components/company/company-shell';
 export default async function CompanyLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const role = (session as any)?.role as string | undefined;
+
+  const role = session?.role as string | undefined;
   if (role !== 'RECRUITER') redirect('/dashboard');
 
   return <CompanyShell>{children}</CompanyShell>;

@@ -11,8 +11,8 @@ import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const { data } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (data as any)?.accessToken as string | undefined;
+
+  const token = data?.accessToken as string | undefined;
   const [confirm, setConfirm] = useState('');
 
   const [currentPassword, setCurrentPassword] = useState('');

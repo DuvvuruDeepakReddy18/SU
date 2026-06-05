@@ -36,8 +36,8 @@ type ThreadPayload = {
 
 export default function MessageThreadPage({ params }: { params: { userId: string } }) {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);

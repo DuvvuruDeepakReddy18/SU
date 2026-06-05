@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { PortalMobileNav } from '@/components/portal-mobile-nav';
 import { Award, Inbox, ClipboardList, LogOut, Loader2, XCircle } from 'lucide-react';
 
 type Me = { fullName: string | null; active: boolean };
@@ -19,8 +20,8 @@ const NAV = [
 export function InterviewerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
 
   const { data: me, isLoading } = useQuery({
     enabled: !!token,
@@ -105,7 +106,12 @@ export function InterviewerShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
-          <div className="text-sm text-muted-foreground">{me.fullName ?? 'Interviewer'}</div>
+          <div className="flex min-w-0 items-center gap-2">
+            <PortalMobileNav nav={NAV} brand="for interviewers" />
+            <div className="truncate text-sm text-muted-foreground">
+              {me.fullName ?? 'Interviewer'}
+            </div>
+          </div>
           <div className="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs text-amber-700">
             Expert interviewer
           </div>

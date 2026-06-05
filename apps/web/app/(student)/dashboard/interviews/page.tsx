@@ -34,8 +34,8 @@ const SLOTS = Array.from({ length: 13 }, (_, i) => i + 8); // 8..20
 
 export default function InterviewsPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
   const config = useConfig();
   const [showPicker, setShowPicker] = useState(false);

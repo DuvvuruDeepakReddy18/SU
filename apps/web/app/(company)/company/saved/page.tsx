@@ -10,8 +10,8 @@ type SavedRow = { note: string | null; savedAt: string; candidate: CandidateCard
 
 export default function SavedPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({

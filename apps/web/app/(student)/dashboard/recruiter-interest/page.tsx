@@ -29,8 +29,8 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
 
 export default function RecruiterInterestPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({

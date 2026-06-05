@@ -56,8 +56,8 @@ export default function CandidateDetailPage() {
   const params = useParams<{ studentId: string }>();
   const studentId = params.studentId;
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
   const [message, setMessage] = useState('');
   const [showInquiry, setShowInquiry] = useState(false);

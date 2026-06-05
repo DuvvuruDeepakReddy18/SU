@@ -35,8 +35,8 @@ const LAYERS = ['L1_ACADEMIC', 'L2_CERTIFIED', 'L3_PROVEN', 'L4_EXPERT'];
 
 export default function AnalyticsPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const [exporting, setExporting] = useState(false);
 
   const { data: a } = useQuery({

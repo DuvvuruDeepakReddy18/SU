@@ -23,8 +23,8 @@ type Interviewer = {
 
 export default function InterviewersPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
   const [form, setForm] = useState({ fullName: '', email: '', expertise: '', bio: '' });
   const [lastTemp, setLastTemp] = useState<{ email: string; tempPassword: string } | null>(null);

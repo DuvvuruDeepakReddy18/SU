@@ -53,8 +53,8 @@ const STATUS_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'second
 
 export default function InquiryDetailPage({ params }: { params: { id: string } }) {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
   const [body, setBody] = useState('');
 

@@ -35,8 +35,8 @@ export default function JobPipelinePage() {
   const params = useParams<{ id: string }>();
   const jobId = params.id;
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({

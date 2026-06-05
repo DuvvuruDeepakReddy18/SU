@@ -24,8 +24,8 @@ type Pending = {
 
 export default function VerificationsQueuePage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const queryClient = useQueryClient();
 
   // Which row's "Reject" dialog is open (null = no dialog visible).

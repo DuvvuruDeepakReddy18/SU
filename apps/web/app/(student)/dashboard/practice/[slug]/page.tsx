@@ -81,8 +81,8 @@ const LANGS: { value: 'python' | 'javascript' | 'cpp' | 'java'; monaco: string }
 
 export default function ProblemPage({ params }: { params: { slug: string } }) {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const qc = useQueryClient();
 
   const { data: problem } = useQuery({

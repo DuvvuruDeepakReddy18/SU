@@ -34,8 +34,8 @@ const STATUS_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'second
 
 export default function InquiriesPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
   const [tab, setTab] = useState<'sent' | 'received'>('sent');
 
   const { data: sent } = useQuery({

@@ -24,8 +24,8 @@ type DomainDetail = {
 
 export default function DomainProblemsPage({ params }: { params: { slug: string } }) {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
 
   const { data } = useQuery({
     queryKey: ['domain', params.slug],

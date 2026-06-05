@@ -50,8 +50,8 @@ const ID_BADGE: Record<string, { label: string; cls: string }> = {
 
 export default function StudentsPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
 
   const [q, setQ] = useState('');
   const [minLayer, setMinLayer] = useState('');

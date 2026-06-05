@@ -65,8 +65,8 @@ function stubRating(id: string): { score: number; count: number } {
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
 
   const [showInquiry, setShowInquiry] = useState(false);
   const [brief, setBrief] = useState('');

@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notification-bell';
+import { PortalMobileNav } from '@/components/portal-mobile-nav';
 import {
   Building2,
   Search,
@@ -38,8 +39,8 @@ const NAV = [
 export function CompanyShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const token = (session as any)?.accessToken as string | undefined;
+
+  const token = session?.accessToken as string | undefined;
 
   const { data: me, isLoading } = useQuery({
     enabled: !!token,
@@ -106,7 +107,12 @@ export function CompanyShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
-          <div className="text-sm text-muted-foreground">{me.fullName ?? 'Recruiter'}</div>
+          <div className="flex min-w-0 items-center gap-2">
+            <PortalMobileNav nav={NAV} brand="for companies" />
+            <div className="truncate text-sm text-muted-foreground">
+              {me.fullName ?? 'Recruiter'}
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <div className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-700">
               Verified company
