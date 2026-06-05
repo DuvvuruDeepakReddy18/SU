@@ -12,10 +12,11 @@
 import { PrismaClient } from '@prisma/client';
 import { CURRICULUM } from './curriculum-data';
 import { CURRICULUM_V2 } from './curriculum-data-v2';
+import { CURRICULUM_V3 } from './curriculum-data-v3';
 
-// Single combined set — v1 + v2 additions. Slugs are namespaced (curr- vs
-// curr2-) so there's no collision risk.
-const ALL_EXERCISES = [...CURRICULUM, ...CURRICULUM_V2];
+// Single combined set — v1 + v2 + v3 additions. Slugs are namespaced
+// (curr- / curr2- / curr3-) so there's no collision risk.
+const ALL_EXERCISES = [...CURRICULUM, ...CURRICULUM_V2, ...CURRICULUM_V3];
 
 const DIFFICULTY_POINTS = { easy: 5, medium: 12, hard: 25 } as const;
 
