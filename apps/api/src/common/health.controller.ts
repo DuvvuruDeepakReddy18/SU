@@ -1,6 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from './decorators/public.decorator';
 
+// Orchestrators poll /health on a tight loop — never throttle it (and /config,
+// which the frontend fetches on every page load).
+@SkipThrottle()
 @Controller()
 export class HealthController {
   @Public()

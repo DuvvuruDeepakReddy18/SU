@@ -1,4 +1,5 @@
 import { Controller, Headers, HttpCode, Post, RawBodyRequest, Req } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { RazorpayService } from './razorpay.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -17,6 +18,9 @@ import { Public } from '../../common/decorators/public.decorator';
  *   Events : payment.captured (sufficient for v1)
  */
 @Controller('webhooks/razorpay')
+// Payment providers retry aggressively on non-2xx; never throttle their
+// callbacks (the HMAC check is the real gate here).
+@SkipThrottle()
 export class RazorpayWebhookController {
   constructor(private readonly razorpay: RazorpayService) {}
 

@@ -10,6 +10,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AuthService } from './auth.service';
 import {
@@ -36,6 +37,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @Post('signup')
   signup(@Body(ZodValidationPipe) dto: SignupDto) {
     return this.auth.signup(dto);
@@ -44,6 +46,7 @@ export class AuthController {
   // Recruiter self-signup (separate from student signup). Creates a pending
   // RECRUITER account; no candidate-search access until an admin approves.
   @Public()
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @Post('company/signup')
   signupRecruiter(@Body(ZodValidationPipe) dto: RecruiterSignupDto) {
     return this.auth.signupRecruiter(dto);
@@ -52,6 +55,7 @@ export class AuthController {
   // Institution / TPO request-access signup. Creates a pending
   // INSTITUTION_ADMIN account; no roster access until an admin approves.
   @Public()
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @Post('institution/signup')
   signupInstitutionAdmin(@Body(ZodValidationPipe) dto: InstitutionAdminSignupDto) {
     return this.auth.signupInstitutionAdmin(dto);
@@ -83,6 +87,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } }) // brute-force resistance
   @HttpCode(200)
   @Post('login')
   login(@Body(ZodValidationPipe) dto: LoginDto) {
@@ -106,12 +111,14 @@ export class AuthController {
   // ---------- Email verification ----------
 
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(200)
   @Post('verify-email')
   verifyEmail(@Body(ZodValidationPipe) dto: VerifyEmailDto) {
     return this.auth.verifyEmail(dto.token);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60_000 } }) // each call sends an email — cap it
   @HttpCode(200)
   @Post('resend-verification')
   resendVerification(@CurrentUser() user: JwtPayload) {
@@ -121,6 +128,7 @@ export class AuthController {
   // ---------- Password reset (public) ----------
 
   @Public()
+  @Throttle({ default: { limit: 8, ttl: 60_000 } }) // each call emails a real address — cap it
   @HttpCode(200)
   @Post('forgot-password')
   forgotPassword(@Body(ZodValidationPipe) dto: ForgotPasswordDto) {
@@ -128,6 +136,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @HttpCode(200)
   @Post('reset-password')
   resetPassword(@Body(ZodValidationPipe) dto: ResetPasswordDto) {
@@ -136,6 +145,7 @@ export class AuthController {
 
   // ---------- Change password (authenticated) ----------
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } }) // brute-force on current password
   @HttpCode(200)
   @Post('change-password')
   changePassword(@CurrentUser() user: JwtPayload, @Body(ZodValidationPipe) dto: ChangePasswordDto) {

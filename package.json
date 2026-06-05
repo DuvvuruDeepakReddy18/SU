@@ -17,6 +17,7 @@
     "db:seed": "pnpm --filter @skillverify/db seed",
     "db:studio": "pnpm --filter @skillverify/db studio",
     "make:admin": "dotenv -e .env -- tsx apps/api/scripts/make-admin.ts",
+    "gen:secrets": "node scripts/gen-secrets.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "prepare": "husky"
   },

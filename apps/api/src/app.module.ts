@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 import { PrismaModule } from './infra/prisma/prisma.module';
 import { RedisModule } from './infra/redis/redis.module';
@@ -37,6 +38,11 @@ import { InterviewerModule } from './modules/interviewer/interviewer.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    // Default budget: 120 requests / minute / IP. Abuse-prone routes (auth)
+    // tighten this with per-route @Throttle; webhooks/health opt out with
+    // @SkipThrottle. NOTE: in-memory storage — correct for a single instance.
+    // When scaling horizontally, swap in a Redis ThrottlerStorage so the
+    // budget is shared across instances.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     RedisModule,
@@ -67,5 +73,10 @@ import { InterviewerModule } from './modules/interviewer/interviewer.module';
     InterviewerModule,
   ],
   controllers: [HealthController],
+  providers: [
+    // Enforce the throttle budget globally. Without this, ThrottlerModule is
+    // configured but inert — every route was effectively unlimited.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}
