@@ -53,3 +53,9 @@ packages/db/prisma/migrations/dev/
 
 # Test artifacts
 test-resume.pdf
+
+# Internal planning / scratch docs — kept local, not pushed.
+# (A consolidated architecture doc can be added deliberately later.)
+*_PLAN.md
+TRACK_*.md
+RECREATE_PROMPT.md
