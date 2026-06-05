@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Trophy, Plus, Calendar } from 'lucide-react';
+import { Trophy, Plus, Calendar, ListOrdered } from 'lucide-react';
 import { OpportunitiesTabs } from '@/components/opportunities-tabs';
+import { CompetitionRounds } from '@/components/competition-rounds';
 
 type Competition = {
   id: string;
@@ -21,6 +22,7 @@ type Competition = {
   startsAt: string;
   endsAt: string;
   bannerUrl: string | null;
+  postedById: string | null;
   _count: { entries: number };
 };
 
@@ -39,9 +41,11 @@ export default function CompetePage() {
   const { data: session } = useSession();
 
   const token = session?.accessToken as string | undefined;
+  const currentUserId = session?.userId;
   const qc = useQueryClient();
   const [tab, setTab] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [openRounds, setOpenRounds] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: '',
     category: 'case',
@@ -184,10 +188,28 @@ export default function CompetePage() {
                 )}
                 <div className="flex items-center justify-between pt-2">
                   <span className="text-xs text-muted-foreground">{c._count.entries} entries</span>
-                  <Button size="sm" onClick={() => enter.mutate(c.id)}>
-                    Enter Competition
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setOpenRounds(openRounds === c.id ? null : c.id)}
+                    >
+                      <ListOrdered className="h-3.5 w-3.5" /> Rounds
+                    </Button>
+                    <Button size="sm" onClick={() => enter.mutate(c.id)}>
+                      Enter Competition
+                    </Button>
+                  </div>
                 </div>
+                {openRounds === c.id && (
+                  <CompetitionRounds
+                    competitionId={c.id}
+                    isOrganiser={!!currentUserId && c.postedById === currentUserId}
+                    currentUserId={currentUserId}
+                    token={token}
+                    onClose={() => setOpenRounds(null)}
+                  />
+                )}
               </CardContent>
             </Card>
           ))}
