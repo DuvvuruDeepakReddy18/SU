@@ -1,0 +1,39 @@
+name: Deploy
+
+# Fire the provider deploy hooks ONLY after CI passes on main.
+#
+# Opt-in: this no-ops unless you (1) add the RENDER_DEPLOY_HOOK_URL and/or
+# VERCEL_DEPLOY_HOOK_URL repo secrets, and (2) turn off each provider's own
+# auto-deploy so this becomes the single, test-gated path. Until then, Render
+# and Vercel auto-deploy on push as usual. See DEPLOY.md → "Gate deploys on CI".
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    # Only proceed when the CI run that triggered us went green.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      VERCEL_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+    steps:
+      - name: Trigger Render deploy
+        if: env.RENDER_HOOK != ''
+        run: |
+          curl -fsS -X POST "$RENDER_HOOK"
+          echo "Render deploy triggered."
+
+      - name: Trigger Vercel deploy
+        if: env.VERCEL_HOOK != ''
+        run: |
+          curl -fsS -X POST "$VERCEL_HOOK"
+          echo "Vercel deploy triggered."
+
+      - name: Nothing to do
+        if: env.RENDER_HOOK == '' && env.VERCEL_HOOK == ''
+        run: echo "No deploy hooks configured — relying on provider auto-deploy. See DEPLOY.md."

@@ -99,16 +99,21 @@
 4. Render auto-detects [`render.yaml`](render.yaml). Click **Apply**.
 5. Render now asks you to fill in the `sync: false` env vars (the ones it can't generate). Fill these in:
 
-| Env var                                                            | Value                                                                   |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| `DATABASE_URL`                                                     | (from Step 1)                                                           |
-| `REDIS_URL`                                                        | (from Step 3)                                                           |
-| `S3_ENDPOINT`, `S3_REGION`, `S3_KEY`, `S3_SECRET`, `S3_PUBLIC_URL` | (from Step 2)                                                           |
-| `OPENROUTER_API_KEY`                                               | https://openrouter.ai/settings/keys                                     |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                         | https://console.cloud.google.com/apis/credentials                       |
-| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`                         | https://github.com/settings/developers                                  |
-| `NEXTAUTH_URL`                                                     | **Leave blank for now** — you'll come back after Vercel gives you a URL |
-| `CORS_ORIGINS`                                                     | **Leave blank for now** — same reason                                   |
+| Env var                                                            | Value                                                                                                                                       |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                     | (from Step 1)                                                                                                                               |
+| `REDIS_URL`                                                        | (from Step 3)                                                                                                                               |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_KEY`, `S3_SECRET`, `S3_PUBLIC_URL` | (from Step 2)                                                                                                                               |
+| `OPENROUTER_API_KEY`                                               | https://openrouter.ai/settings/keys                                                                                                         |
+| `RESEND_API_KEY`                                                   | https://resend.com/api-keys — **required for email**: without it, verification, password-reset, and notification emails silently never send |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                         | https://console.cloud.google.com/apis/credentials                                                                                           |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`                         | https://github.com/settings/developers                                                                                                      |
+| `NEXTAUTH_URL`                                                     | **Leave blank for now** — you'll come back after Vercel gives you a URL                                                                     |
+| `CORS_ORIGINS`                                                     | **Leave blank for now** — same reason                                                                                                       |
+| `SENTRY_DSN`, `RAZORPAY_*`                                         | Optional — leave blank. Error monitoring and payments stay off until set                                                                    |
+
+> `JWT_SECRET` and `ENCRYPTION_KEY` are generated automatically by Render
+> (`generateValue: true` in render.yaml) — you don't set those by hand.
 
 6. Click **Apply** → Render starts building. Watch the build log. First build takes ~5 min.
 
@@ -134,15 +139,15 @@
    - **Build & Output Settings:** leave defaults (the [`apps/web/vercel.json`](apps/web/vercel.json) overrides them correctly for our monorepo)
    - **Environment Variables:** add these:
 
-| Name                   | Value                                                                 |
-| ---------------------- | --------------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`  | your Render API URL from Step 4                                       |
-| `NEXTAUTH_URL`         | leave blank for first deploy — Vercel gives you a URL, then come back |
-| `NEXTAUTH_SECRET`      | run `openssl rand -hex 32` in any terminal, paste output              |
-| `GOOGLE_CLIENT_ID`     | same as Render                                                        |
-| `GOOGLE_CLIENT_SECRET` | same as Render                                                        |
-| `GITHUB_CLIENT_ID`     | same as Render                                                        |
-| `GITHUB_CLIENT_SECRET` | same as Render                                                        |
+| Name                   | Value                                                                      |
+| ---------------------- | -------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`  | your Render API URL from Step 4                                            |
+| `NEXTAUTH_URL`         | leave blank for first deploy — Vercel gives you a URL, then come back      |
+| `NEXTAUTH_SECRET`      | run `pnpm gen:secrets` locally, paste the `NEXTAUTH_SECRET` line it prints |
+| `GOOGLE_CLIENT_ID`     | same as Render                                                             |
+| `GOOGLE_CLIENT_SECRET` | same as Render                                                             |
+| `GITHUB_CLIENT_ID`     | same as Render                                                             |
+| `GITHUB_CLIENT_SECRET` | same as Render                                                             |
 
 4. **Deploy**. First build takes ~3 min.
 
@@ -176,6 +181,32 @@ You now have both URLs. Connect them:
   ```
   https://<your-vercel-url>/api/auth/callback/github
   ```
+
+---
+
+## Optional — Gate deploys on green CI
+
+By default, Render and Vercel **auto-deploy on every push to `main`** — even if
+the build is broken. To deploy only after the test suite passes, switch to the
+CI-gated workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)),
+which fires provider **deploy hooks** only when CI goes green:
+
+1. **Turn off provider auto-deploy** (it's on by default, which is fine until now):
+   - Render: **Settings → Auto-Deploy → No** (or add `autoDeploy: false` to the API
+     service in `render.yaml`).
+   - Vercel: **Settings → Git → Ignored Build Step** → set to `exit 0` (so pushes
+     don't trigger a build), leaving the deploy hook as the only trigger.
+2. **Create the deploy hooks:**
+   - Render: **Settings → Deploy Hook** → copy the URL.
+   - Vercel: **Settings → Git → Deploy Hooks** → create one for `main` → copy the URL.
+3. **Add them as GitHub repo secrets** (Settings → Secrets and variables → Actions):
+   - `RENDER_DEPLOY_HOOK_URL`
+   - `VERCEL_DEPLOY_HOOK_URL`
+
+Now every push to `main` runs CI (lint, typecheck, unit, e2e); only on success
+does `deploy.yml` POST to the hooks. If the secrets aren't set, the workflow
+no-ops and the providers' own auto-deploy stays in charge — so this is safe to
+ignore until you want it.
 
 ---
 

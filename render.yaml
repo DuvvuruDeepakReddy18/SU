@@ -35,7 +35,7 @@ services:
         value: 10000
       # ---- Provided by you in the Render dashboard ----
       - key: DATABASE_URL
-        sync: false # Supabase Postgres connection string
+        sync: false # Neon Postgres connection string (?sslmode=require)
       - key: REDIS_URL
         sync: false # Upstash Redis connection string (rediss://...)
       - key: JWT_SECRET
@@ -75,6 +75,20 @@ services:
       - key: S3_SECRET
         sync: false
       - key: S3_PUBLIC_URL
+        sync: false
+      # Transactional email (verification, password reset, notifications).
+      # WITHOUT this the API still runs, but every email silently no-ops.
+      - key: RESEND_API_KEY
+        sync: false
+      # Error monitoring — no-op until set.
+      - key: SENTRY_DSN
+        sync: false
+      # Payments (Razorpay) — interviews stay "free during beta" until set.
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
       # Practice runner — Render Linux has Python + Node, so local runner works
       - key: CODE_RUNNER_BACKEND
