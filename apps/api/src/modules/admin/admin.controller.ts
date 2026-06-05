@@ -23,6 +23,7 @@ import { RecruitersService } from '../recruiters/recruiters.service';
 import { InstitutionAdminService } from '../institution-admin/institution-admin.service';
 import { InterviewerService } from '../interviewer/interviewer.service';
 import { EmailService } from '../../infra/email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -43,6 +44,7 @@ export class AdminController {
     private readonly institutionAdmins: InstitutionAdminService,
     private readonly interviewers: InterviewerService,
     private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
     private readonly prisma: PrismaService,
     private readonly audit: VerificationAuditService,
   ) {}
@@ -205,6 +207,11 @@ export class AdminController {
       profile.fullName ?? 'there',
       profile.employer.name,
     );
+    void this.notifications.emit(userId, 'recruiter_approved', {
+      title: 'Recruiter account approved',
+      body: `Your account for ${profile.employer.name} is approved. You can now search and contact candidates.`,
+      href: '/company',
+    });
     return profile;
   }
 
@@ -228,6 +235,13 @@ export class AdminController {
       profile.fullName ?? 'there',
       dto.reason ?? null,
     );
+    void this.notifications.emit(userId, 'recruiter_rejected', {
+      title: 'Recruiter account not approved',
+      body: dto.reason
+        ? `Your recruiter account wasn't approved: ${dto.reason}`
+        : "Your recruiter account wasn't approved. Contact support if you think this is a mistake.",
+      href: '/company',
+    });
     return profile;
   }
 
@@ -253,6 +267,11 @@ export class AdminController {
       profile.fullName ?? 'there',
       profile.institution.name,
     );
+    void this.notifications.emit(userId, 'institution_admin_approved', {
+      title: 'Institution access approved',
+      body: `Your TPO account for ${profile.institution.name} is approved. Your placement dashboard is now live.`,
+      href: '/institution',
+    });
     return profile;
   }
 
@@ -276,6 +295,13 @@ export class AdminController {
       profile.fullName ?? 'there',
       dto.reason ?? null,
     );
+    void this.notifications.emit(userId, 'institution_admin_rejected', {
+      title: 'Institution access not approved',
+      body: dto.reason
+        ? `Your TPO request wasn't approved: ${dto.reason}`
+        : "Your TPO request wasn't approved. Contact support if you think this is a mistake.",
+      href: '/institution',
+    });
     return profile;
   }
 

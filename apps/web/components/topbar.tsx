@@ -1,10 +1,11 @@
 'use client';
 
-import { Bell, LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { MobileNav } from '@/components/mobile-nav';
+import { NotificationBell } from '@/components/notification-bell';
 
 export function Topbar() {
   const { data } = useSession();
@@ -23,9 +24,7 @@ export function Topbar() {
         >
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
-        <Button variant="ghost" size="icon" aria-label="Notifications">
-          <Bell className="h-4 w-4" />
-        </Button>
+        <NotificationBell />
         <Button
           variant="ghost"
           size="icon"

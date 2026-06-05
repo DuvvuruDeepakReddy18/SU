@@ -31,4 +31,21 @@ export class NotificationsService {
   create(userId: string, type: string, payload: Prisma.InputJsonValue) {
     return this.prisma.notification.create({ data: { userId, type, payload } });
   }
+
+  /**
+   * Fire-and-forget emit. Standardises the payload shape ({ title, body, href })
+   * the frontend bell renders, and never throws — a notification failing must
+   * not break the action that triggered it.
+   */
+  async emit(
+    userId: string,
+    type: string,
+    payload: { title: string; body: string; href?: string },
+  ) {
+    try {
+      await this.create(userId, type, payload);
+    } catch {
+      // Best-effort only.
+    }
+  }
 }

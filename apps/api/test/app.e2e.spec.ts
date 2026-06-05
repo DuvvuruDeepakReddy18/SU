@@ -237,6 +237,49 @@ describe('signup → login → me', () => {
       .send({ email: loginEmail, password: newPassword })
       .expect(200);
   });
+
+  // ---- notifications: list / unread / mark-read ----
+
+  it('notifications require auth (401 without token)', async () => {
+    await request(app.getHttpServer()).get(`${PREFIX}/notifications`).expect(401);
+  });
+
+  it('lists, then marks notifications read', async () => {
+    // Seed one directly (emitters are exercised by their own flows; here we
+    // just assert the read API the bell depends on).
+    await prisma.notification.create({
+      data: {
+        userId: createdUserId!,
+        type: 'inquiry_received',
+        payload: { title: 'A company is interested', body: 'Test Co wants to connect.' },
+      },
+    });
+
+    const list = await request(app.getHttpServer())
+      .get(`${PREFIX}/notifications`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    expect(Array.isArray(list.body)).toBe(true);
+    const seeded = list.body.find((n: { type: string }) => n.type === 'inquiry_received');
+    expect(seeded).toBeTruthy();
+    expect(seeded.readAt).toBeNull();
+    expect(seeded.payload.title).toBe('A company is interested');
+
+    await request(app.getHttpServer())
+      .post(`${PREFIX}/notifications/read-all`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect((r) => {
+        if (![200, 201].includes(r.status)) {
+          throw new Error(`read-all expected 200/201, got ${r.status}`);
+        }
+      });
+
+    const after = await request(app.getHttpServer())
+      .get(`${PREFIX}/notifications`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    expect(after.body.every((n: { readAt: string | null }) => n.readAt !== null)).toBe(true);
+  });
 });
 
 describe('public portfolio', () => {

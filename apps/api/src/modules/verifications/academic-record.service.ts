@@ -6,6 +6,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import { OpenRouterClient } from '../../infra/openrouter/openrouter.client';
 import { StorageService } from '../../infra/storage/storage.service';
 import { EmailService } from '../../infra/email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { LayerEngine } from './layer-engine';
 
 const VISION_MODELS = [
@@ -44,6 +45,7 @@ export class AcademicRecordService {
     private readonly storage: StorageService,
     private readonly engine: LayerEngine,
     private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -322,6 +324,11 @@ If a field cannot be read, use null.`;
       profile.governmentName ?? profile.fullName,
       semester,
     );
+    await this.notifications.emit(userId, 'marksheet_approved', {
+      title: `Semester ${semester} marksheet verified`,
+      body: 'Your marksheet was approved and your verified CGPA has been updated.',
+      href: '/dashboard/verifications',
+    });
   }
 
   private async notifyOnReject(
@@ -342,6 +349,13 @@ If a field cannot be read, use null.`;
       reasonCode,
       reasonNote,
     );
+    await this.notifications.emit(userId, 'marksheet_rejected', {
+      title: `Semester ${semester} marksheet needs another look`,
+      body: reasonNote
+        ? `Rejected: ${reasonNote}. You can re-upload a clearer copy.`
+        : 'Your marksheet was rejected. You can re-upload a clearer copy.',
+      href: '/dashboard/verifications',
+    });
   }
 }
 

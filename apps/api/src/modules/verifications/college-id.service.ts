@@ -5,6 +5,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import { OpenRouterClient } from '../../infra/openrouter/openrouter.client';
 import { EmailService } from '../../infra/email/email.service';
 import { StorageService } from '../../infra/storage/storage.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const VISION_MODELS = [
   // Free vision models on OpenRouter, in fallback order. The list is brittle
@@ -31,6 +32,7 @@ export class CollegeIdService {
     private readonly openrouter: OpenRouterClient,
     private readonly email: EmailService,
     private readonly storage: StorageService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -147,6 +149,11 @@ If any field cannot be determined, use null. Be conservative with confidence.`;
       updated.user.email,
       updated.governmentName ?? updated.fullName,
     );
+    void this.notifications.emit(profileUserId, 'college_id_approved', {
+      title: 'College ID verified',
+      body: 'Your college ID was approved. Your academic layer (L1) is now confirmed.',
+      href: '/dashboard/verifications',
+    });
     return { before, updated };
   }
 
@@ -171,6 +178,13 @@ If any field cannot be determined, use null. Be conservative with confidence.`;
       reasonCode as RejectionReason,
       reasonNote ?? null,
     );
+    void this.notifications.emit(profileUserId, 'college_id_rejected', {
+      title: 'College ID needs another look',
+      body: reasonNote
+        ? `Your college ID was rejected: ${reasonNote}. You can re-upload a clearer copy.`
+        : 'Your college ID was rejected. You can re-upload a clearer copy.',
+      href: '/dashboard/verifications',
+    });
     return { before, updated };
   }
 

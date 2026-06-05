@@ -7,6 +7,7 @@ import type {
 } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EmailService } from '../../infra/email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 // Verification layers, lowest → highest. Used to build "at or above" filters.
 const LAYER_ORDER: VerificationLayer[] = [
@@ -26,6 +27,7 @@ export class RecruitersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -456,6 +458,13 @@ export class RecruitersService {
       recruiter.employer.name,
       drive?.role ?? null,
     );
+    await this.notifications.emit(studentId, 'inquiry_received', {
+      title: 'A company is interested',
+      body: drive?.role
+        ? `${recruiter.employer.name} reached out about ${drive.role}.`
+        : `${recruiter.employer.name} wants to connect with you.`,
+      href: '/dashboard/recruiter-interest',
+    });
   }
 
   /** Recruiter's sent inquiries (with the student card + acceptance state). */
@@ -539,6 +548,11 @@ export class RecruitersService {
       recruiter.fullName ?? 'there',
       student.fullName,
     );
+    await this.notifications.emit(recruiterId, 'inquiry_accepted', {
+      title: 'Contact shared',
+      body: `${student.fullName} accepted your request — their contact details are now visible.`,
+      href: '/company/messages',
+    });
   }
 
   async countStudentPendingInquiries(studentId: string) {

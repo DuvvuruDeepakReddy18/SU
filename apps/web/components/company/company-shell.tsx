@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/notification-bell';
 import {
   Building2,
   Search,
@@ -106,8 +107,11 @@ export function CompanyShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
           <div className="text-sm text-muted-foreground">{me.fullName ?? 'Recruiter'}</div>
-          <div className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-700">
-            Verified company
+          <div className="flex items-center gap-2">
+            <div className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-700">
+              Verified company
+            </div>
+            <NotificationBell />
           </div>
         </header>
         <main className="flex-1 px-4 py-6 md:px-6 md:py-8">{children}</main>

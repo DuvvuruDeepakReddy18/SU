@@ -11,6 +11,7 @@ import { VerificationLayer } from '@prisma/client';
 import type { InviteInterviewerInput, ScoreInterviewInput } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EmailService } from '../../infra/email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { LayerEngine } from '../verifications/layer-engine';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class InterviewerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
     private readonly layers: LayerEngine,
   ) {}
 
@@ -182,6 +184,29 @@ export class InterviewerService {
     if (pass && booking.skillId) {
       await this.awardL4(booking.userId, booking.skillId);
     }
+
+    const skill = booking.skillId
+      ? await this.prisma.skillCatalog.findUnique({
+          where: { id: booking.skillId },
+          select: { name: true },
+        })
+      : null;
+    const skillName = skill?.name ?? 'your skill';
+    void this.notifications.emit(
+      booking.userId,
+      pass ? 'interview_passed' : 'interview_failed',
+      pass
+        ? {
+            title: 'Expert interview passed 🎉',
+            body: `You passed your ${skillName} interview — it's now verified at L4 (Expert).`,
+            href: '/dashboard/skills',
+          }
+        : {
+            title: 'Interview feedback ready',
+            body: `Your ${skillName} interview didn't pass this time. Open it to read the panel's feedback.`,
+            href: '/dashboard/interviews',
+          },
+    );
     return updated;
   }
 
