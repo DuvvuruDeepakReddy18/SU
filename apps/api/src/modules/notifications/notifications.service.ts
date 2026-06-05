@@ -1,10 +1,20 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { QueueService } from '../../infra/queue/queue.service';
+import { QUEUE_NAMES } from '../../infra/queue/queue.constants';
+
+export type NotificationPayload = { title: string; body: string; href?: string };
+export type NotificationJob = { userId: string; type: string; payload: NotificationPayload };
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly log = new Logger(NotificationsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly queue: QueueService,
+  ) {}
 
   list(userId: string) {
     return this.prisma.notification.findMany({
@@ -28,24 +38,29 @@ export class NotificationsService {
     });
   }
 
+  /** The actual DB write. Called by the worker, and as the offline fallback. */
   create(userId: string, type: string, payload: Prisma.InputJsonValue) {
     return this.prisma.notification.create({ data: { userId, type, payload } });
   }
 
   /**
-   * Fire-and-forget emit. Standardises the payload shape ({ title, body, href })
-   * the frontend bell renders, and never throws — a notification failing must
-   * not break the action that triggered it.
+   * Fire-and-forget emit. Enqueues a notification-fanout job so the DB write
+   * (and any future email fanout) happens off the request path with BullMQ's
+   * retry/backoff. Never throws — a notification must never break the action
+   * that triggered it. If the queue is unreachable, falls back to a direct
+   * write so the notification isn't lost.
    */
-  async emit(
-    userId: string,
-    type: string,
-    payload: { title: string; body: string; href?: string },
-  ) {
+  async emit(userId: string, type: string, payload: NotificationPayload) {
+    const job: NotificationJob = { userId, type, payload };
     try {
-      await this.create(userId, type, payload);
-    } catch {
-      // Best-effort only.
+      await this.queue.add(QUEUE_NAMES.NOTIFICATION_FANOUT, job);
+    } catch (e) {
+      this.log.warn(`Notification enqueue failed, writing directly: ${(e as Error).message}`);
+      try {
+        await this.create(userId, type, payload);
+      } catch {
+        // Best-effort only.
+      }
     }
   }
 }
