@@ -2,17 +2,27 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
-# pnpm 11.x scoped-builds approval. Setting `true` lets the package run its
-# postinstall scripts; `false` blocks. Each one reviewed and known-safe.
+# Dependencies allowed to run install/build scripts. pnpm 11 blocks ALL build
+# scripts by default and ERRORS on a fresh CI install if a package with one
+# isn't approved here — which is exactly why the first Render build aborted
+# (`ERR_PNPM_IGNORED_BUILDS`). `allowBuilds` is the map pnpm 11.x reads/manages
+# (the older `.npmrc only-built-dependencies` list is ignored on a clean
+# install). Every entry reviewed and known-safe:
+#   prisma / @prisma/*  → download the query engine (required at runtime)
+#   esbuild / @swc/core → download native compiler binaries
+#   bcrypt              → native hashing binding
+#   @sentry/cli         → sourcemap-upload CLI
+#   msgpackr-extract / unrs-resolver → optional native accelerators (JS fallback)
 allowBuilds:
-  '@sentry/cli': true # downloads the Sentry CLI binary for sourcemap upload
-  '@swc/core': true # downloads native swc binary (Next.js compiler)
-  core-js: true # polyfill init — harmless
-  protobufjs: true # generates parser bindings
-
-# Legacy field kept for compatibility with older pnpm clients.
-onlyBuiltDependencies:
-  - '@swc/core'
-  - '@sentry/cli'
-  - core-js
-  - protobufjs
+  '@nestjs/core': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@sentry/cli': true
+  '@swc/core': true
+  bcrypt: true
+  core-js: true
+  esbuild: true
+  msgpackr-extract: true
+  prisma: true
+  protobufjs: true
+  unrs-resolver: true

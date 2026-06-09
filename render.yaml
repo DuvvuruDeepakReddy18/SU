@@ -19,8 +19,10 @@ services:
     # sleep takes ~30s to wake. Upgrade to Starter ($7/mo) to keep always-on.
     branch: main
     rootDir: .
+    # Render provisions pnpm@11.1.3 from the root package.json `packageManager`
+    # field, so no corepack step is needed (it also fails on Render's read-only
+    # /usr/bin). Node is pinned via .node-version.
     buildCommand: |
-      corepack enable && corepack prepare pnpm@11.1.3 --activate
       pnpm install --frozen-lockfile
       pnpm --filter @skillverify/shared build
       pnpm --filter @skillverify/db generate
