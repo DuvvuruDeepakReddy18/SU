@@ -11,6 +11,7 @@ import { SceneProblem } from '@/components/landing/scene-problem';
 import { SceneLayers } from '@/components/landing/scene-layers';
 import { SceneFlow } from '@/components/landing/scene-flow';
 import { SceneRecruiter } from '@/components/landing/scene-recruiter';
+import { SceneAudience } from '@/components/landing/scene-audience';
 import { SceneFinal } from '@/components/landing/scene-final';
 
 /**
@@ -43,11 +44,16 @@ export default function LandingPage() {
             </span>
           </Link>
           <nav className="flex items-center gap-2">
-            <Link href="/company/signup" className="hidden sm:block">
+            <a href="#for-you" className="hidden md:block">
               <Button variant="ghost" size="sm">
                 For companies
               </Button>
-            </Link>
+            </a>
+            <a href="#for-you" className="hidden md:block">
+              <Button variant="ghost" size="sm">
+                For institutions
+              </Button>
+            </a>
             <Link href="/login">
               <Button variant="ghost" size="sm">
                 Sign in
@@ -172,7 +178,12 @@ export default function LandingPage() {
       {/* ============ SCENE 5 — RECRUITER ============ */}
       <SceneRecruiter />
 
-      {/* ============ SCENE 6 — FINAL CTA ============ */}
+      {/* ============ SCENE 6 — WHO IT'S FOR (companies / institutions) ============ */}
+      <div id="for-you">
+        <SceneAudience />
+      </div>
+
+      {/* ============ SCENE 7 — FINAL CTA ============ */}
       <SceneFinal />
 
       {/* ============ FOOTER ============ */}
@@ -196,6 +207,9 @@ export default function LandingPage() {
             </Link>
             <Link href="/login" className="hover:text-foreground">
               Sign in
+            </Link>
+            <Link href="/admin" className="hover:text-foreground opacity-60">
+              Admin
             </Link>
           </div>
         </div>

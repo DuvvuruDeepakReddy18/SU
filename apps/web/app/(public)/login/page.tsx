@@ -25,19 +25,21 @@ export default function LoginPage() {
       toast.error('Invalid email or password');
       return;
     }
-    // Route by role — recruiters → company portal, institution admins →
-    // institution portal, everyone else → student dashboard.
+    // Route by role — admins → admin portal, recruiters → company portal,
+    // institution admins → institution portal, everyone else → student dashboard.
     const session = await getSession();
 
     const role = session?.role as string | undefined;
     router.push(
-      role === 'RECRUITER'
-        ? '/company'
-        : role === 'INSTITUTION_ADMIN'
-          ? '/institution'
-          : role === 'INTERVIEWER'
-            ? '/interviewer'
-            : '/dashboard',
+      role === 'PLATFORM_ADMIN'
+        ? '/admin'
+        : role === 'RECRUITER'
+          ? '/company'
+          : role === 'INSTITUTION_ADMIN'
+            ? '/institution'
+            : role === 'INTERVIEWER'
+              ? '/interviewer'
+              : '/dashboard',
     );
   }
 
