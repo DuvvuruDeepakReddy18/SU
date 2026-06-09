@@ -1,9 +1,24 @@
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 
 export const metadata = { title: 'SkillVerify · Admin' };
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Admin portal layout. Server-side guard mirrors the API's @Roles check:
+ *  - no session → /login
+ *  - signed in but not a platform admin → bounce to the student dashboard
+ * Without this, any signed-in user could load the admin shell (its API calls
+ * would 403, but the UI shouldn't render at all).
+ */
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect('/login');
+  const role = session?.role as string | undefined;
+  if (role !== 'PLATFORM_ADMIN') redirect('/dashboard');
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">

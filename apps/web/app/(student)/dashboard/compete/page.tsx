@@ -56,8 +56,11 @@ export default function CompetePage() {
   });
 
   const { data } = useQuery({
-    queryKey: ['compete', tab],
-    queryFn: () => api<Competition[]>(`/competitions${tab ? `?category=${tab}` : ''}`),
+    // Token-scoped: the API needs the JWT to include this student's
+    // institute-only competitions (not just public ones).
+    queryKey: ['compete', tab, token],
+    queryFn: () => api<Competition[]>(`/competitions${tab ? `?category=${tab}` : ''}`, { token }),
+    enabled: !!token,
   });
 
   const post = useMutation({

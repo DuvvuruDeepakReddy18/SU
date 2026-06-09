@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { VerificationLayer, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { instituteScopeAllows } from '../../common/institute-scope';
 
 const LAYER_RANK: Record<string, number> = {
   L0_UNVERIFIED: 0,
@@ -79,6 +80,16 @@ export class PlacementsService {
   async apply(userId: string, driveId: string) {
     const drive = await this.prisma.placementDrive.findUnique({ where: { id: driveId } });
     if (!drive) throw new NotFoundException();
+
+    // Scope gate: an institute-only drive is open only to that institution's
+    // students. Hiding it from the list isn't enough — block direct-by-ID applies.
+    const me = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { institutionId: true },
+    });
+    if (!instituteScopeAllows(drive.scope, drive.institutionId, me?.institutionId ?? null)) {
+      throw new NotFoundException(); // don't reveal the drive exists
+    }
 
     // Gate by the user's highest verification layer. The required layer is the
     // higher of the drive's own minLevel and the platform-wide L3 floor.

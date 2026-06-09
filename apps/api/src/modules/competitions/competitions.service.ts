@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { instituteScopeAllows } from '../../common/institute-scope';
 import { rankEntries, type EntryScores } from './competition-ranking';
 
 type Actor = { sub: string; role: string };
@@ -58,6 +59,17 @@ export class CompetitionsService {
   async enter(userId: string, competitionId: string, submissionUrl?: string) {
     const comp = await this.prisma.competition.findUnique({ where: { id: competitionId } });
     if (!comp) throw new NotFoundException();
+
+    // Scope gate: an institute-only competition is open only to that
+    // institution's students. Block direct-by-ID entries, not just the list.
+    const me = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { institutionId: true },
+    });
+    if (!instituteScopeAllows(comp.scope, comp.institutionId, me?.institutionId ?? null)) {
+      throw new NotFoundException(); // don't reveal the competition exists
+    }
+
     try {
       return await this.prisma.competitionEntry.create({
         data: { competitionId, userId, submissionUrl: submissionUrl ?? null },
