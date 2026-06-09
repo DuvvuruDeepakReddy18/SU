@@ -11,7 +11,10 @@ services:
     name: skillverify-api
     runtime: node
     plan: free
-    region: oregon
+    # Co-located with the data layer (Neon / Upstash / Supabase all in
+    # ap-southeast-1) so DB + Redis round-trips stay local instead of crossing
+    # the Pacific on every query.
+    region: singapore
     # Free Web Services on Render sleep after 15 min idle. First request after
     # sleep takes ~30s to wake. Upgrade to Starter ($7/mo) to keep always-on.
     branch: main
