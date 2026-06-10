@@ -44,16 +44,14 @@ export class CommunityService {
     }
 
     // sort=hot is a simplified Reddit score: score / age_hours^1.5. We can't
-    // express that purely in Prisma orderBy, so for "hot" we fetch a wider
-    // window by score then sort in app. "new" and "top" are pure orderBy.
+    // express that in Prisma orderBy, so for "hot" we pull the most RECENT
+    // window of posts and rank them in app (hot favours recent + popular).
+    // "new" and "top" are pure orderBy and paginate in the DB.
+    const HOT_WINDOW = 150;
     const orderBy: Prisma.CommunityPostOrderByWithRelationInput[] =
-      opts.sort === 'top'
-        ? [{ score: 'desc' }, { createdAt: 'desc' }]
-        : opts.sort === 'hot'
-          ? [{ score: 'desc' }, { createdAt: 'desc' }]
-          : [{ createdAt: 'desc' }];
+      opts.sort === 'top' ? [{ score: 'desc' }, { createdAt: 'desc' }] : [{ createdAt: 'desc' }];
 
-    const fetchSize = opts.sort === 'hot' ? opts.pageSize * 5 : opts.pageSize;
+    const fetchSize = opts.sort === 'hot' ? HOT_WINDOW : opts.pageSize;
 
     const [items, total, myVotes] = await Promise.all([
       this.prisma.communityPost.findMany({
@@ -79,11 +77,15 @@ export class CommunityService {
 
     // Hot-rank in app for the "hot" sort. Wilson-ish: score / age_hours^1.5.
     let ranked = items;
+    let effectiveTotal = total;
     if (opts.sort === 'hot') {
       const now = Date.now();
-      ranked = [...items].sort((a, b) => hot(b, now) - hot(a, now));
+      const all = [...items].sort((a, b) => hot(b, now) - hot(a, now));
+      // Pagination is bounded to the fetched hot window, and `total` reflects
+      // that — otherwise deep pages came back empty while total claimed more.
+      effectiveTotal = all.length;
       const start = (opts.page - 1) * opts.pageSize;
-      ranked = ranked.slice(start, start + opts.pageSize);
+      ranked = all.slice(start, start + opts.pageSize);
     }
 
     const voteByPost = new Map(myVotes.map((v) => [v.postId, v.value]));
@@ -120,7 +122,7 @@ export class CommunityService {
               institution: p.author.institution?.shortName ?? p.author.institution?.name ?? null,
             },
       })),
-      total,
+      total: effectiveTotal,
       page: opts.page,
       pageSize: opts.pageSize,
     };

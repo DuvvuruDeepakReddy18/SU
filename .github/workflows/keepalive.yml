@@ -1,0 +1,23 @@
+name: Keep API warm
+
+# Render's free web service spins down after ~15 min of no traffic, so the next
+# request pays a ~50s cold start. This pings /health every ~10 min to keep the
+# instance awake.
+#
+# Trade-off: staying up 24/7 uses ~730 of the free 750 instance-hours/month —
+# fine as your ONLY free Render service. If you add more free services or want
+# headroom, delete this workflow (and accept the cold start) or upgrade Render
+# to Starter ($7/mo, always-on). A dedicated uptime monitor (UptimeRobot, etc.)
+# is more reliable than GitHub's cron, which can drift under load.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: curl -fsS -m 90 https://skillverify-api.onrender.com/api/v1/health || true

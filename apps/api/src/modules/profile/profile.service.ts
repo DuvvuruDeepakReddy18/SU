@@ -122,6 +122,10 @@ export class ProfileService {
   }
 
   private async mergeParsed(userId: string, parsed: ResumeParseResult) {
+    const existing = await this.prisma.studentProfile.findUnique({
+      where: { userId },
+      select: { phoneNumber: true },
+    });
     const updates: Record<string, unknown> = {};
     if (parsed.fullName) updates.fullName = parsed.fullName;
     // Headline + bio are marked REQUIRED in the prompt but small free models
@@ -130,7 +134,11 @@ export class ProfileService {
     const bio = parsed.bio?.trim() || synthesizeBio(parsed);
     if (headline) updates.headline = headline;
     if (bio) updates.bio = bio;
-    if (parsed.phone) updates.phone = parsed.phone;
+    // Fill phoneNumber from the resume only when the student has none yet (e.g.
+    // OAuth signups skip the phone field). Never overwrite a verified signup
+    // number. The recruiter contact reveal reads phoneNumber — the old `phone`
+    // column was dead data that never surfaced.
+    if (parsed.phone && !existing?.phoneNumber) updates.phoneNumber = parsed.phone;
     if (parsed.location) updates.location = parsed.location;
     if (parsed.linkedinUrl) updates.linkedinUrl = parsed.linkedinUrl;
     if (parsed.githubUrl) updates.githubUrl = parsed.githubUrl;
