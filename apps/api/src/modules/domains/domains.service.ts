@@ -10,13 +10,19 @@ export class DomainsService {
       orderBy: { sortOrder: 'asc' },
       include: { _count: { select: { problems: true } } },
     });
-    return domains.map((d) => ({
-      id: d.id,
-      slug: d.slug,
-      name: d.name,
-      icon: d.icon,
-      problemCount: d._count.problems,
-    }));
+    // Only surface domains that actually have problems. The practice engine
+    // grades code (Python/JS/C/C++/Java + algorithms/math), so domains that
+    // need a different evaluator (SQL, Regex, React, Ruby, …) stay hidden
+    // until they have real, solvable content rather than showing empty cards.
+    return domains
+      .filter((d) => d._count.problems > 0)
+      .map((d) => ({
+        id: d.id,
+        slug: d.slug,
+        name: d.name,
+        icon: d.icon,
+        problemCount: d._count.problems,
+      }));
   }
 
   async getBySlug(slug: string, page = 1, pageSize = 30) {
