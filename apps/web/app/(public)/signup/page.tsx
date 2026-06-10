@@ -188,7 +188,8 @@ export default function SignupPage() {
                 />
                 {institution?.domain && (
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    Must end with @{institution.domain}
+                    Must be an @{institution.domain} address (a campus subdomain like @students.
+                    {institution.domain} is fine)
                   </p>
                 )}
               </div>

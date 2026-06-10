@@ -53,9 +53,17 @@ export class AuthService {
     // ones we haven't enriched with a domain yet).
     if (institution.domain) {
       const emailDomain = input.instituteEmail.split('@')[1]?.toLowerCase();
-      if (emailDomain !== institution.domain.toLowerCase()) {
+      const instDomain = institution.domain.toLowerCase();
+      // Accept the institution domain OR any subdomain of it — most students
+      // are on campus/dept subdomains (ch.students.amrita.edu, cse.iitb.ac.in,
+      // …). The leading dot keeps this safe: "evilamrita.edu" doesn't match,
+      // only true subdomains "*.amrita.edu" do.
+      const ok =
+        !!emailDomain && (emailDomain === instDomain || emailDomain.endsWith('.' + instDomain));
+      if (!ok) {
         throw new BadRequestException(
-          `Institute email must end with @${institution.domain} for ${institution.name}.`,
+          `Institute email must be an @${institution.domain} address ` +
+            `(a campus subdomain like @students.${institution.domain} is fine) for ${institution.name}.`,
         );
       }
     }
@@ -406,9 +414,18 @@ export class AuthService {
   }
 
   private async resolveInstitution(email: string) {
-    const domain = email.split('@')[1]?.toLowerCase();
-    if (!domain) return null;
-    return this.prisma.institution.findUnique({ where: { domain } });
+    const host = email.split('@')[1]?.toLowerCase();
+    if (!host) return null;
+    // Try the full host, then strip the leftmost label progressively so a
+    // campus/dept subdomain (ch.students.amrita.edu) resolves to its parent
+    // institution domain (amrita.edu). Stops at the registrable 2-label domain.
+    const parts = host.split('.');
+    for (let i = 0; i < parts.length - 1; i++) {
+      const candidate = parts.slice(i).join('.');
+      const inst = await this.prisma.institution.findUnique({ where: { domain: candidate } });
+      if (inst) return inst;
+    }
+    return null;
   }
 
   private async generateSlug(name: string) {
