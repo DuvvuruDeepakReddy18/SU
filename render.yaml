@@ -95,6 +95,9 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
-      # Practice runner — Render Linux has Python + Node, so local runner works
+      # Practice runner. MUST be judge0 in production — the `local` runner
+      # executes user code unsandboxed on this host (RCE). Set JUDGE0_URL to a
+      # hosted Judge0 to enable code execution; until then submissions just
+      # error (safe). The API also hard-forces judge0 when NODE_ENV=production.
       - key: CODE_RUNNER_BACKEND
-        value: local
+        value: judge0
