@@ -16,20 +16,24 @@ export class StorageService {
   private readonly publicUrl: string;
 
   constructor() {
-    this.bucket = process.env.S3_BUCKET ?? 'skillverify';
-    this.publicUrl = process.env.S3_PUBLIC_URL ?? `http://localhost:9000/${this.bucket}`;
-    if (!process.env.S3_ENDPOINT || !process.env.S3_KEY || !process.env.S3_SECRET) {
+    // Trim every value. A stray trailing newline/space from a pasted env var
+    // (very common in hosting dashboards) corrupts the SigV4 `Authorization`
+    // header the AWS SDK builds — the access key id and region go straight into
+    // it — and Node then throws ERR_INVALID_CHAR on every upload.
+    const endpoint = process.env.S3_ENDPOINT?.trim();
+    const accessKeyId = process.env.S3_KEY?.trim();
+    const secretAccessKey = process.env.S3_SECRET?.trim();
+    this.bucket = (process.env.S3_BUCKET ?? 'skillverify').trim();
+    this.publicUrl = process.env.S3_PUBLIC_URL?.trim() || `http://localhost:9000/${this.bucket}`;
+    if (!endpoint || !accessKeyId || !secretAccessKey) {
       this.log.warn('S3 not configured — file uploads will return a clear error.');
       this.client = null;
       return;
     }
     this.client = new S3Client({
-      endpoint: process.env.S3_ENDPOINT,
-      region: process.env.S3_REGION ?? 'us-east-1',
-      credentials: {
-        accessKeyId: process.env.S3_KEY,
-        secretAccessKey: process.env.S3_SECRET,
-      },
+      endpoint,
+      region: (process.env.S3_REGION ?? 'us-east-1').trim(),
+      credentials: { accessKeyId, secretAccessKey },
       forcePathStyle: true,
     });
   }
