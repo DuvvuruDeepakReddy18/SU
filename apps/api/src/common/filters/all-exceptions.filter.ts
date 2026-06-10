@@ -47,6 +47,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
     }
 
+    // Production: never leak internals from an unexpected (non-HTTP) error — a
+    // raw Prisma/driver message exposes table + column names. HttpException
+    // messages (BadRequest, Forbidden, …) are deliberate and safe to surface.
+    if (!this.isDev && !(exception instanceof HttpException)) {
+      message = 'Internal server error';
+    }
+
     const err = exception instanceof Error ? exception : new Error(String(exception));
     this.log.error(`${req.method} ${req.url} -> ${status}: ${err.message}`, err.stack);
 

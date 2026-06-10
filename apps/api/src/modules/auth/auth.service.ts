@@ -94,17 +94,19 @@ export class AuthService {
       },
     });
 
-    // Enqueue AI pre-screen — never blocks the signup HTTP response. Worker
-    // picks it up and may flip collegeIdStatus to 'verified' if OCR cleanly
-    // matches name + institution and the image isn't edited.
-    await this.queue.addNamed(
-      QUEUE_NAMES.VERIFICATION_SCREEN,
-      VERIFICATION_JOBS.SCREEN_COLLEGE_ID,
-      { userId: user.id },
-      // jobId keyed by user means re-uploads dedupe naturally (latest queued
-      // wins). Note: BullMQ forbids ':' in custom job ids, so use '-'.
-      { jobId: `screen-college-id-${user.id}` },
-    );
+    // Enqueue AI pre-screen — fire-and-forget so a Redis hiccup never hangs or
+    // breaks signup. (Previously awaited, which would block the response if the
+    // queue was slow/down.) Worst case the college-ID stays pending for manual
+    // review instead of auto-screening. jobId keyed by user dedupes re-uploads;
+    // BullMQ forbids ':' in custom job ids, so use '-'.
+    void this.queue
+      .addNamed(
+        QUEUE_NAMES.VERIFICATION_SCREEN,
+        VERIFICATION_JOBS.SCREEN_COLLEGE_ID,
+        { userId: user.id },
+        { jobId: `screen-college-id-${user.id}` },
+      )
+      .catch(() => {});
 
     // Welcome + email-verification — fire-and-forget; EmailService swallows
     // its own errors, so a Resend outage never breaks signup.
@@ -391,11 +393,13 @@ export class AuthService {
       role: user.role as UserRole,
       institutionId: user.institutionId ?? null,
     };
-    // Access token lives 7 days in dev (matches NextAuth session sensibly).
-    // For prod, drop to 15m and implement refresh via the refreshToken below.
-    const accessTtl = process.env.NODE_ENV === 'production' ? '15m' : '7d';
+    // The access token must outlive (or match) the NextAuth session (30d) —
+    // there is no refresh flow yet, so a shorter TTL would silently 401 every
+    // request mid-session. Revocation for deleted/banned users is handled in
+    // JwtStrategy (deletedAt check). TODO: real refresh-token rotation to allow
+    // a shorter access TTL again.
     return {
-      accessToken: this.jwt.sign(payload, { expiresIn: accessTtl }),
+      accessToken: this.jwt.sign(payload, { expiresIn: '30d' }),
       refreshToken: this.jwt.sign(payload, { expiresIn: '30d' }),
       user: { id: user.id, email: user.email, role: user.role },
     };

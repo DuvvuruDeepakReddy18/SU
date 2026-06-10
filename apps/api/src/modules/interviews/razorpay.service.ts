@@ -1,6 +1,13 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import Razorpay from 'razorpay';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+
+/** Constant-time hex-string compare (avoids signature timing leaks). */
+function signaturesMatch(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
+}
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 /**
@@ -124,7 +131,7 @@ export class RazorpayService {
     const expected = createHmac('sha256', secret)
       .update(`${body.orderId}|${body.paymentId}`)
       .digest('hex');
-    if (expected !== body.signature) {
+    if (!signaturesMatch(expected, body.signature)) {
       throw new BadRequestException('Razorpay signature mismatch.');
     }
 
@@ -158,7 +165,7 @@ export class RazorpayService {
       throw new BadRequestException('Missing X-Razorpay-Signature header.');
     }
     const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-    if (expected !== signature) {
+    if (!signaturesMatch(expected, signature)) {
       this.log.warn('Razorpay webhook signature mismatch.');
       throw new HttpException({ message: 'Invalid signature.' }, HttpStatus.UNAUTHORIZED);
     }

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
 import { VerificationLayer } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
@@ -56,9 +57,11 @@ export class InterviewsService {
       );
     }
 
-    // Auto-generate a Jitsi Meet room — free, no API key, anyone with the URL can join.
-    // Format: https://meet.jit.si/<room-name>. Room names are random + unguessable.
-    const roomName = `skillverify-${userId.slice(-6)}-${Date.now().toString(36)}`;
+    // Auto-generate a Jitsi Meet room — free, no API key, anyone with the URL
+    // can join, so the name must be UNGUESSABLE (24 hex chars of CSPRNG). A
+    // userId-slice + timestamp would be guessable and let outsiders crash or
+    // eavesdrop on a candidate's interview.
+    const roomName = `skillverify-${randomBytes(12).toString('hex')}`;
     const meetingUrl = `https://meet.jit.si/${roomName}`;
     return this.prisma.interviewBooking.create({
       data: {
