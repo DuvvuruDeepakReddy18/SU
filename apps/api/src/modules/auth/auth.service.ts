@@ -12,6 +12,7 @@ import type {
   SignupInput,
   RecruiterSignupInput,
   InstitutionAdminSignupInput,
+  CompleteOnboardingInput,
 } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { StorageService } from '../../infra/storage/storage.service';
@@ -51,22 +52,7 @@ export class AuthService {
     // If the institution has a domain on record, the institute email must
     // match it. Otherwise we accept any email (user-added institutions or
     // ones we haven't enriched with a domain yet).
-    if (institution.domain) {
-      const emailDomain = input.instituteEmail.split('@')[1]?.toLowerCase();
-      const instDomain = institution.domain.toLowerCase();
-      // Accept the institution domain OR any subdomain of it — most students
-      // are on campus/dept subdomains (ch.students.amrita.edu, cse.iitb.ac.in,
-      // …). The leading dot keeps this safe: "evilamrita.edu" doesn't match,
-      // only true subdomains "*.amrita.edu" do.
-      const ok =
-        !!emailDomain && (emailDomain === instDomain || emailDomain.endsWith('.' + instDomain));
-      if (!ok) {
-        throw new BadRequestException(
-          `Institute email must be an @${institution.domain} address ` +
-            `(a campus subdomain like @students.${institution.domain} is fine) for ${institution.name}.`,
-        );
-      }
-    }
+    this.assertInstituteEmailMatches(institution, input.instituteEmail);
 
     // The collegeIdFileKey must be a previously-uploaded temp object.
     if (!input.collegeIdFileKey.startsWith('temp/college-ids/')) {
@@ -318,22 +304,23 @@ export class AuthService {
       throw new UnauthorizedException('This account is no longer active.');
     }
     if (!user) {
+      // Create the student even when we can't resolve an institution from the
+      // email domain (personal Gmail, etc.). They land in the onboarding gate,
+      // which forces institution + college-ID before the dashboard unlocks — so
+      // OAuth works for everyone WITHOUT bypassing verification. A Workspace-for-
+      // Education email pre-fills the institution as a convenience.
       const institution = await this.resolveInstitution(input.email);
-      if (!institution) {
-        throw new BadRequestException(
-          'This OAuth account is not associated with a verified institution domain.',
-        );
-      }
       const slug = await this.generateSlug(input.fullName);
       user = await this.prisma.user.create({
         data: {
           email: input.email,
           role: 'STUDENT',
-          institutionId: institution.id,
+          institutionId: institution?.id ?? null,
           emailVerified: new Date(),
           studentProfile: {
             create: {
               fullName: input.fullName,
+              governmentName: input.fullName,
               sharableSlug: slug,
               avatarUrl: input.avatarUrl ?? null,
               isPublic: true,
@@ -343,6 +330,87 @@ export class AuthService {
       });
     }
     return this.issueTokens(user);
+  }
+
+  /**
+   * Completes signup for an OAuth-created student: sets their institution,
+   * college-ID, phone, institute email and course, then queues the AI
+   * pre-screen — the same trust inputs an email/password signup collects. The
+   * dashboard onboarding gate blocks access until this succeeds.
+   */
+  async completeOnboarding(userId: string, input: CompleteOnboardingInput) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { studentProfile: true },
+    });
+    if (!user || user.deletedAt) throw new UnauthorizedException('Account not found.');
+    if (user.role !== 'STUDENT' || !user.studentProfile) {
+      throw new BadRequestException('Only student accounts have an onboarding step.');
+    }
+
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: input.institutionId },
+    });
+    if (!institution) throw new BadRequestException('Selected institution does not exist.');
+    this.assertInstituteEmailMatches(institution, input.instituteEmail);
+
+    if (!input.collegeIdFileKey.startsWith('temp/college-ids/')) {
+      throw new BadRequestException('Invalid college-ID upload key.');
+    }
+    const collegeIdUrl = this.storage.publicUrlFor(input.collegeIdFileKey);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        institutionId: institution.id,
+        studentProfile: {
+          update: {
+            governmentName: input.governmentName,
+            phoneNumber: input.phoneNumber,
+            instituteEmail: input.instituteEmail,
+            courseProgram: input.courseProgram,
+            collegeIdUrl,
+            collegeIdUploadedAt: new Date(),
+            collegeIdStatus: 'pending_review',
+          },
+        },
+      },
+    });
+
+    // Fire-and-forget AI pre-screen (see signup() for the rationale).
+    void this.queue
+      .addNamed(
+        QUEUE_NAMES.VERIFICATION_SCREEN,
+        VERIFICATION_JOBS.SCREEN_COLLEGE_ID,
+        { userId: user.id },
+        { jobId: `screen-college-id-${user.id}` },
+      )
+      .catch(() => {});
+
+    return { ok: true };
+  }
+
+  /**
+   * When the institution has a domain on record, the institute email must be on
+   * that domain or a subdomain of it (campus/dept subdomains are common). The
+   * leading dot keeps it safe: "evilamrita.edu" doesn't match, only true
+   * "*.amrita.edu" subdomains do. No domain on record → accept any email.
+   */
+  private assertInstituteEmailMatches(
+    institution: { domain: string | null; name: string },
+    instituteEmail: string,
+  ) {
+    if (!institution.domain) return;
+    const emailDomain = instituteEmail.split('@')[1]?.toLowerCase();
+    const instDomain = institution.domain.toLowerCase();
+    const ok =
+      !!emailDomain && (emailDomain === instDomain || emailDomain.endsWith('.' + instDomain));
+    if (!ok) {
+      throw new BadRequestException(
+        `Institute email must be an @${institution.domain} address ` +
+          `(a campus subdomain like @students.${institution.domain} is fine) for ${institution.name}.`,
+      );
+    }
   }
 
   async me(userId: string) {

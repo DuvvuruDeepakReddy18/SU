@@ -53,6 +53,12 @@ export const SignupSchema = z.object({
 });
 export type SignupInput = z.infer<typeof SignupSchema>;
 
+// OAuth users are created without these details, then complete them in the
+// onboarding gate. Same fields as signup minus email/password (their identity
+// comes from the provider).
+export const CompleteOnboardingSchema = SignupSchema.omit({ email: true, password: true });
+export type CompleteOnboardingInput = z.infer<typeof CompleteOnboardingSchema>;
+
 export const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),

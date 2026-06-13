@@ -15,6 +15,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { AuthService } from './auth.service';
 import {
   SignupDto,
+  CompleteOnboardingDto,
   LoginDto,
   OAuthSyncDto,
   RecruiterSignupDto,
@@ -109,6 +110,18 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: JwtPayload) {
     return this.auth.me(user.sub);
+  }
+
+  // Authenticated: an OAuth-created student fills in institution + college-ID +
+  // phone here. The dashboard gate blocks them until this succeeds.
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('complete-onboarding')
+  completeOnboarding(
+    @CurrentUser() user: JwtPayload,
+    @Body(ZodValidationPipe) dto: CompleteOnboardingDto,
+  ) {
+    return this.auth.completeOnboarding(user.sub, dto);
   }
 
   // ---------- Email verification ----------

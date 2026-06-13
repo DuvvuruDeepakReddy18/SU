@@ -1,14 +1,29 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { serverApi } from '@/lib/server-api';
 import { Sidebar } from '@/components/sidebar';
 import { Topbar } from '@/components/topbar';
 import { ChatWidget } from '@/components/chat-widget';
 import { EmailVerifyBanner } from '@/components/email-verify-banner';
 
+type Me = {
+  role: string;
+  institutionId: string | null;
+  studentProfile: { collegeIdUrl: string | null } | null;
+} | null;
+
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
+
+  // OAuth-created students arrive with no institution / college-ID. Force them
+  // through onboarding before any dashboard page renders. (A failed /auth/me —
+  // e.g. cold start — degrades open rather than locking everyone out.)
+  const me = await serverApi<Me>('/auth/me').catch(() => null);
+  if (me && me.role === 'STUDENT' && (!me.institutionId || !me.studentProfile?.collegeIdUrl)) {
+    redirect('/onboarding');
+  }
 
   return (
     <div className="flex min-h-screen">

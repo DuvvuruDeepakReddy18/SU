@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
 import {
   SignupSchema,
+  CompleteOnboardingSchema,
   LoginSchema,
   RecruiterSignupSchema,
   InstitutionAdminSignupSchema,
@@ -12,6 +13,7 @@ import {
 } from '@skillverify/shared';
 
 export class SignupDto extends createZodDto(SignupSchema) {}
+export class CompleteOnboardingDto extends createZodDto(CompleteOnboardingSchema) {}
 export class LoginDto extends createZodDto(LoginSchema) {}
 export class RecruiterSignupDto extends createZodDto(RecruiterSignupSchema) {}
 export class InstitutionAdminSignupDto extends createZodDto(InstitutionAdminSignupSchema) {}
