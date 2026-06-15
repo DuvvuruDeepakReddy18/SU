@@ -31,6 +31,43 @@ export const COURSE_PROGRAMS = [
 ] as const;
 export type CourseProgram = (typeof COURSE_PROGRAMS)[number];
 
+// Narrow the course list by the institution's category so the dropdown stays
+// relevant — an IIT shouldn't offer MBBS, a medical college shouldn't offer
+// B.Tech. Unknown / 'other' / null falls back to the full list.
+export function coursesForCategory(category?: string | null): readonly CourseProgram[] {
+  switch (category) {
+    case 'engineering':
+      return [
+        'B.Tech',
+        'B.E.',
+        'M.Tech',
+        'M.E.',
+        'B.Arch',
+        'M.Arch',
+        'BCA',
+        'MCA',
+        'B.Sc',
+        'M.Sc',
+        'PhD',
+        'Other',
+      ];
+    case 'management':
+      return ['BBA', 'MBA', 'B.Com', 'M.Com', 'PhD', 'Other'];
+    case 'law':
+      return ['LLB', 'LLM', 'B.A.', 'PhD', 'Other'];
+    case 'science':
+      return ['B.Sc', 'M.Sc', 'BCA', 'MCA', 'B.A.', 'PhD', 'Other'];
+    case 'commerce':
+      return ['B.Com', 'M.Com', 'BBA', 'MBA', 'PhD', 'Other'];
+    case 'arts':
+      return ['B.A.', 'M.A.', 'B.Com', 'BBA', 'PhD', 'Other'];
+    case 'medical':
+      return ['MBBS', 'MD', 'BDS', 'B.Pharma', 'M.Pharma', 'B.Sc', 'PhD', 'Other'];
+    default:
+      return COURSE_PROGRAMS;
+  }
+}
+
 export const SignupSchema = z.object({
   // Legal name as it appears on the college ID — used for verification matching.
   governmentName: z.string().min(2).max(120),

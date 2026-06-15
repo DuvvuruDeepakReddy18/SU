@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { API_BASE, api } from '@/lib/api';
-import { COURSE_PROGRAMS } from '@skillverify/shared';
+import { coursesForCategory } from '@skillverify/shared';
 import { InstitutionPicker, type Institution } from '@/components/institution-picker';
 
 type Me = {
@@ -74,6 +74,14 @@ export default function OnboardingPage() {
       active = false;
     };
   }, [status, token, router]);
+
+  // Keep the chosen course valid for the institution's category.
+  useEffect(() => {
+    const courses = coursesForCategory(institution?.category);
+    if (!(courses as readonly string[]).includes(courseProgram)) {
+      setCourseProgram(courses[0]);
+    }
+  }, [institution?.category, courseProgram]);
 
   async function uploadCollegeId(file: File) {
     setUploading(true);
@@ -150,8 +158,8 @@ export default function OnboardingPage() {
         <CardHeader>
           <CardTitle>Finish setting up your profile</CardTitle>
           <CardDescription>
-            You signed in with {session?.user?.email}. A few verification details and you’re in —
-            this is what keeps SkillVerify profiles trustworthy.
+            You signed in with {session?.user?.email}. A few verification details and you’re in.
+            This is what keeps SkillVerify profiles trustworthy.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -194,11 +202,11 @@ export default function OnboardingPage() {
                 <select
                   value={courseProgram}
                   onChange={(e) => setCourseProgram(e.target.value)}
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 text-sm"
                   required
                 >
-                  {COURSE_PROGRAMS.map((c) => (
-                    <option key={c} value={c}>
+                  {coursesForCategory(institution?.category).map((c) => (
+                    <option key={c} value={c} className="bg-background text-foreground">
                       {c}
                     </option>
                   ))}

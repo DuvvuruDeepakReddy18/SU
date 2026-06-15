@@ -98,8 +98,8 @@ export default function LandingPage() {
               transition={{ duration: 0.7, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
               className="mt-8 max-w-xl text-base md:text-lg text-muted-foreground"
             >
-              A digital portfolio recruiters can trust. Every claim — your CGPA, your skills, your
-              projects — backed by four layers of evidence.
+              A digital portfolio recruiters can trust. Every claim (your CGPA, your skills, your
+              projects) is backed by four layers of evidence.
             </motion.p>
 
             <motion.div

@@ -79,7 +79,7 @@ export default function SupportPage() {
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <Faq
               q="My institution isn't in the picker."
-              a="On the signup form, click 'Don't see your college? Add it' inside the picker. Your institution will be created in pending state — you can finish signing up immediately, and we'll review the entry within 24 hours."
+              a="On the signup form, click 'Don't see your college? Add it' inside the picker. Your institution will be created in pending state, so you can finish signing up immediately, and we'll review the entry within 24 hours."
             />
             <Faq
               q="My college ID was rejected."

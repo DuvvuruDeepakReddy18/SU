@@ -60,7 +60,7 @@ export default function CompanySignupPage() {
         return;
       }
       track(EVENTS.RECRUITER_SIGNUP);
-      toast.success('Account created — pending verification');
+      toast.success('Account created, pending verification');
       router.push('/company');
     } catch (err) {
       const msg = (err as Error).message;

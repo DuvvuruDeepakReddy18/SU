@@ -87,10 +87,10 @@ export async function generateMetadata({
   // do NOT set `openGraph.images` here, that would override the generated
   // file-based image with the bare avatar URL.
   return {
-    title: `${profile.fullName} — Verified Skill Portfolio`,
+    title: `${profile.fullName} | Verified Skill Portfolio`,
     description: profile.headline ?? profile.bio ?? `${profile.fullName} on SkillVerify`,
     openGraph: {
-      title: `${profile.fullName} — SkillVerify`,
+      title: `${profile.fullName} | SkillVerify`,
       description: profile.headline ?? '',
       type: 'profile',
     },

@@ -18,19 +18,27 @@ export class InstitutionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Typeahead search. Matches against name (case-insensitive contains) and
-   * shortName (case-insensitive contains). Curated rows (verified=true) rank
-   * above user-added ones, then by NIRF rank ascending (nulls last).
+   * Typeahead search. The query is split into words, and EVERY word must match
+   * at least one of name / shortName / city / state (all case-insensitive). So
+   * "iit delhi" matches "Indian Institute of Technology Delhi" (iit→shortName,
+   * delhi→name/city), and "amrita chennai" matches the Chennai campus
+   * (amrita→name, chennai→city) — not just contiguous-substring matches.
+   * Curated rows (verified=true) rank above user-added ones, then by NIRF rank.
    */
   async search(q: string, category?: string, limit = 20) {
     const cleanQ = (q ?? '').trim();
     const where: Record<string, unknown> = {};
 
     if (cleanQ.length > 0) {
-      where.OR = [
-        { name: { contains: cleanQ, mode: 'insensitive' } },
-        { shortName: { contains: cleanQ, mode: 'insensitive' } },
-      ];
+      const tokens = cleanQ.split(/\s+/).filter(Boolean).slice(0, 6);
+      where.AND = tokens.map((tok) => ({
+        OR: [
+          { name: { contains: tok, mode: 'insensitive' } },
+          { shortName: { contains: tok, mode: 'insensitive' } },
+          { city: { contains: tok, mode: 'insensitive' } },
+          { state: { contains: tok, mode: 'insensitive' } },
+        ],
+      }));
     }
     if (category && VALID_CATEGORIES.includes(category as Category)) {
       where.category = category;

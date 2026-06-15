@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { API_BASE } from '@/lib/api';
-import { COURSE_PROGRAMS } from '@skillverify/shared';
+import { coursesForCategory } from '@skillverify/shared';
 import { InstitutionPicker, type Institution } from '@/components/institution-picker';
 import { EVENTS, track } from '@/lib/analytics';
 
@@ -27,6 +27,16 @@ export default function SignupPage() {
   const [collegeIdKey, setCollegeIdKey] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Keep the chosen course valid for the institution's category (an IIT's list
+  // has no MBBS). When the institution changes, reset if the current course
+  // isn't offered.
+  useEffect(() => {
+    const courses = coursesForCategory(institution?.category);
+    if (!(courses as readonly string[]).includes(courseProgram)) {
+      setCourseProgram(courses[0]);
+    }
+  }, [institution?.category, courseProgram]);
 
   async function uploadCollegeId(file: File) {
     setUploading(true);
@@ -162,11 +172,11 @@ export default function SignupPage() {
                 <select
                   value={courseProgram}
                   onChange={(e) => setCourseProgram(e.target.value)}
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 text-sm"
                   required
                 >
-                  {COURSE_PROGRAMS.map((c) => (
-                    <option key={c} value={c}>
+                  {coursesForCategory(institution?.category).map((c) => (
+                    <option key={c} value={c} className="bg-background text-foreground">
                       {c}
                     </option>
                   ))}

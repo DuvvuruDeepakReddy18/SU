@@ -150,8 +150,9 @@ export function InstitutionPicker({ value, onChange, required }: Props) {
                 ))}
               </div>
 
-              {/* Results */}
-              <div className="max-h-72 overflow-y-auto">
+              {/* Results — overscroll-contain keeps the mouse wheel scrolling
+                  this list instead of bleeding through to the page behind. */}
+              <div className="max-h-72 overflow-y-auto overscroll-contain">
                 {loading && (
                   <div className="px-3 py-3 text-sm text-muted-foreground">Searching…</div>
                 )}

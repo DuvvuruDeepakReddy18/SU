@@ -56,7 +56,7 @@ export default function InstitutionSignupPage() {
         router.push('/login');
         return;
       }
-      toast.success('Request submitted — pending verification');
+      toast.success('Request submitted, pending verification');
       router.push('/institution');
     } catch (err) {
       const msg = (err as Error).message;
