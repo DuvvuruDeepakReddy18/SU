@@ -95,7 +95,7 @@ export default function LeaderboardPage() {
       : scope === 'institute'
         ? `${institutionName} leaderboard`
         : skillData?.skillName
-          ? `${skillData.skillName} — top performers`
+          ? `${skillData.skillName} · ${skillInstituteOnly ? institutionName : 'global'} top performers`
           : 'Skill leaderboard';
 
   return (
@@ -141,15 +141,19 @@ export default function LeaderboardPage() {
                 </option>
               ))}
             </select>
-            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={skillInstituteOnly}
-                onChange={(e) => setSkillInstituteOnly(e.target.checked)}
+            {/* Same Global / Institute toggle as the main leaderboard. */}
+            <div className="inline-flex rounded-md border bg-secondary/30 p-1">
+              <Tab active={!skillInstituteOnly} onClick={() => setSkillInstituteOnly(false)}>
+                Global
+              </Tab>
+              <Tab
+                active={skillInstituteOnly}
+                onClick={() => setSkillInstituteOnly(true)}
                 disabled={!institutionId}
-              />
-              Limit to {institutionName}
-            </label>
+              >
+                {institutionName}
+              </Tab>
+            </div>
           </CardContent>
         </Card>
       )}
