@@ -14,6 +14,10 @@ const tooling = (n: string) => ({ name: n, category: 'Tools & Methodologies' });
 const design = (n: string) => ({ name: n, category: 'Design' });
 const soft = (n: string) => ({ name: n, category: 'Soft Skills' });
 const business = (n: string) => ({ name: n, category: 'Business & Product' });
+const law = (n: string) => ({ name: n, category: 'Law' });
+const commerce = (n: string) => ({ name: n, category: 'Commerce & Finance' });
+const mgmt = (n: string) => ({ name: n, category: 'Management' });
+const cocur = (n: string) => ({ name: n, category: 'Co-curricular' });
 
 export const SKILL_SEEDS: SkillSeed[] = [
   // Languages
@@ -230,4 +234,84 @@ export const SKILL_SEEDS: SkillSeed[] = [
   soft('Leadership'),
   soft('Mentoring'),
   soft('Public Speaking'),
+
+  // Law
+  law('Legal Research'),
+  law('Legal Writing & Drafting'),
+  law('Contract Drafting'),
+  law('Constitutional Law'),
+  law('Criminal Law'),
+  law('Corporate & Company Law'),
+  law('Civil Litigation'),
+  law('Intellectual Property Law'),
+  law('Taxation Law'),
+  law('Mergers & Acquisitions'),
+  law('Compliance & Regulatory'),
+  law('Arbitration & Mediation'),
+  law('Moot Court'),
+  law('Cyber Law'),
+  law('International Law'),
+  law('Due Diligence'),
+  law('Labour & Employment Law'),
+
+  // Commerce & Finance
+  commerce('Financial Accounting'),
+  commerce('Cost & Management Accounting'),
+  commerce('Auditing'),
+  commerce('Direct Taxation'),
+  commerce('GST & Indirect Taxation'),
+  commerce('Financial Modeling'),
+  commerce('Equity Research'),
+  commerce('Investment Banking'),
+  commerce('Corporate Finance'),
+  commerce('Financial Analysis'),
+  commerce('Tally ERP'),
+  commerce('SAP FICO'),
+  commerce('Bookkeeping'),
+  commerce('Budgeting & Forecasting'),
+  commerce('Risk Management'),
+  commerce('Portfolio Management'),
+  commerce('Banking & Insurance'),
+  commerce('Business Economics'),
+  commerce('Business Statistics'),
+
+  // Management
+  mgmt('Marketing Strategy'),
+  mgmt('Digital Marketing'),
+  mgmt('Brand Management'),
+  mgmt('Sales & Business Development'),
+  mgmt('Market Research'),
+  mgmt('Operations Management'),
+  mgmt('Supply Chain Management'),
+  mgmt('Human Resource Management'),
+  mgmt('Business Analytics'),
+  mgmt('Strategic Management'),
+  mgmt('Management Consulting'),
+  mgmt('Organizational Behavior'),
+  mgmt('Negotiation'),
+  mgmt('Content Marketing'),
+  mgmt('Social Media Marketing'),
+  mgmt('Performance Marketing'),
+  mgmt('Customer Relationship Management (CRM)'),
+  mgmt('Entrepreneurship'),
+
+  // Co-curricular
+  cocur('Debate'),
+  cocur('Model United Nations (MUN)'),
+  cocur('Quizzing'),
+  cocur('Creative Writing'),
+  cocur('Content Creation'),
+  cocur('Photography'),
+  cocur('Videography'),
+  cocur('Event Management'),
+  cocur('Anchoring & Hosting'),
+  cocur('Theatre & Drama'),
+  cocur('Journalism'),
+  cocur('Blogging'),
+  cocur('NSS / NCC'),
+  cocur('Volunteering & Social Work'),
+  cocur('Sports & Athletics'),
+  cocur('Music'),
+  cocur('Fine Arts'),
+  cocur('Club Leadership'),
 ];
