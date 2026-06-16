@@ -311,6 +311,40 @@ export default function ProblemPage({ params }: { params: { slug: string } }) {
             </div>
           </div>
 
+          {/* Performance reminder — nudges optimal complexity over brute force. */}
+          <div className="rounded-md border border-amber-300/50 bg-amber-50 p-3 text-xs dark:border-amber-800/40 dark:bg-amber-950/20">
+            <strong className="font-semibold">Mind your complexity.</strong> Submissions run against
+            hidden tests with a 2-second limit. Aim for the optimal time and space complexity; a
+            brute-force solution may time out (TLE) on large inputs.
+          </div>
+
+          {problem.topics.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold">Brush up the concepts</h4>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {problem.topics.map((t) => (
+                  <a
+                    key={t}
+                    href={`https://www.geeksforgeeks.org/?s=${encodeURIComponent(t)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border px-2.5 py-0.5 text-xs text-primary hover:bg-secondary/40"
+                  >
+                    {t} ↗
+                  </a>
+                ))}
+                <a
+                  href="https://neetcode.io/roadmap"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border px-2.5 py-0.5 text-xs text-primary hover:bg-secondary/40"
+                >
+                  NeetCode roadmap ↗
+                </a>
+              </div>
+            </div>
+          )}
+
           {sub && <SubmissionResult sub={sub} />}
 
           <ProblemLeaderboard slug={params.slug} />
