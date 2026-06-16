@@ -1,7 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { SkillsService } from './skills.service';
-import { ClaimSkillDto, UpdateUserSkillDto, SkillsCatalogQueryDto } from './dto';
+import {
+  ClaimSkillDto,
+  ClaimCustomSkillDto,
+  UpdateUserSkillDto,
+  SkillsCatalogQueryDto,
+} from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { JwtPayload } from '@skillverify/shared';
@@ -24,6 +29,12 @@ export class SkillsController {
   @Post('me')
   claim(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: ClaimSkillDto) {
     return this.skills.claim(u.sub, dto);
+  }
+
+  // Claim a skill not in the catalog (creates it under "Custom", then claims).
+  @Post('me/custom')
+  claimCustom(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: ClaimCustomSkillDto) {
+    return this.skills.claimCustom(u.sub, dto.name, dto.selfRatedLevel);
   }
 
   @Patch('me/:id')

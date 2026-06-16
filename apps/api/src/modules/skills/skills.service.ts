@@ -44,6 +44,26 @@ export class SkillsService {
     }
   }
 
+  async claimCustom(userId: string, name: string, selfRatedLevel: number) {
+    const clean = name.trim();
+    // Find-or-create the catalog entry (case-insensitive) so duplicate custom
+    // skills collapse to one, then claim it. Custom skills live under "Custom".
+    let skill = await this.prisma.skillCatalog.findFirst({
+      where: { name: { equals: clean, mode: 'insensitive' } },
+    });
+    if (!skill) {
+      skill = await this.prisma.skillCatalog.create({ data: { name: clean, category: 'Custom' } });
+    }
+    try {
+      return await this.prisma.userSkill.create({
+        data: { userId, skillId: skill.id, selfRatedLevel },
+        include: { skill: true },
+      });
+    } catch {
+      throw new BadRequestException('Skill already claimed');
+    }
+  }
+
   async updateRating(userId: string, userSkillId: string, dto: UpdateUserSkillDto) {
     const existing = await this.prisma.userSkill.findUnique({ where: { id: userSkillId } });
     if (!existing || existing.userId !== userId) throw new NotFoundException('UserSkill not found');

@@ -61,6 +61,22 @@ export default function SkillsPage() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const claimCustom = useMutation({
+    mutationFn: (name: string) =>
+      api('/skills/me/custom', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ name, selfRatedLevel: 3 }),
+      }),
+    onSuccess: () => {
+      toast.success('Custom skill added');
+      setQ('');
+      qc.invalidateQueries({ queryKey: ['skills.mine'] });
+      qc.invalidateQueries({ queryKey: ['skills.catalog'] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const remove = useMutation({
     mutationFn: (id: string) => api(`/skills/me/${id}`, { method: 'DELETE', token }),
     onSuccess: () => {
@@ -114,7 +130,7 @@ export default function SkillsPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <ul className="mt-4 max-h-[60vh] space-y-2 overflow-auto">
+            <ul className="mt-4 max-h-[60vh] space-y-2 overflow-auto overscroll-contain">
               {catalog?.items.map((s) => (
                 <li key={s.id} className="flex items-center justify-between rounded-md border p-3">
                   <div>
@@ -133,6 +149,17 @@ export default function SkillsPage() {
                 </li>
               ))}
             </ul>
+            {q.trim().length >= 2 &&
+              !catalog?.items.some((s) => s.name.toLowerCase() === q.trim().toLowerCase()) && (
+                <button
+                  type="button"
+                  onClick={() => claimCustom.mutate(q.trim())}
+                  disabled={claimCustom.isPending}
+                  className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline disabled:opacity-50"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add “{q.trim()}” as a custom skill
+                </button>
+              )}
           </CardContent>
         </Card>
       </div>

@@ -6,6 +6,14 @@ export const ClaimSkillSchema = z.object({
 });
 export type ClaimSkillInput = z.infer<typeof ClaimSkillSchema>;
 
+// Claim a skill not in the catalog — creates it (find-or-create by name) then
+// claims it. Lets students add niche/custom skills the curated list misses.
+export const ClaimCustomSkillSchema = z.object({
+  name: z.string().min(2).max(60),
+  selfRatedLevel: z.number().int().min(1).max(5),
+});
+export type ClaimCustomSkillInput = z.infer<typeof ClaimCustomSkillSchema>;
+
 export const UpdateUserSkillSchema = z.object({
   selfRatedLevel: z.number().int().min(1).max(5),
 });
