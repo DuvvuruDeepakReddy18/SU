@@ -9,22 +9,68 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { useConfig } from '@/lib/use-config';
-import { Github, Linkedin, Link2, Plus, Trash2, ExternalLink, FileCheck } from 'lucide-react';
+import {
+  Github,
+  Linkedin,
+  Code2,
+  Trophy,
+  Link2,
+  Plus,
+  Trash2,
+  ExternalLink,
+  FileCheck,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { ProfileTabs } from '@/components/profile-tabs';
 
-type Integration = {
-  provider: string;
-  connected: boolean;
-  syncStatus: string;
-  lastSyncedAt: string | null;
-};
-
 type CustomLink = { label: string; url: string; icon?: string };
 
+type LinkKey = 'githubUrl' | 'linkedinUrl' | 'leetcodeUrl' | 'codechefUrl';
+
 type Profile = {
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  leetcodeUrl: string | null;
+  codechefUrl: string | null;
   customLinks: CustomLink[] | null;
 };
+
+const LINK_PROVIDERS: {
+  key: LinkKey;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  placeholder: string;
+  help: string;
+}[] = [
+  {
+    key: 'githubUrl',
+    label: 'GitHub',
+    icon: Github,
+    placeholder: 'https://github.com/your-username',
+    help: 'Your public repos back up L3 "Proven" projects.',
+  },
+  {
+    key: 'linkedinUrl',
+    label: 'LinkedIn',
+    icon: Linkedin,
+    placeholder: 'https://linkedin.com/in/your-name',
+    help: 'Shown on your portfolio for recruiters.',
+  },
+  {
+    key: 'leetcodeUrl',
+    label: 'LeetCode',
+    icon: Code2,
+    placeholder: 'https://leetcode.com/u/your-username',
+    help: 'Your problem-solving profile.',
+  },
+  {
+    key: 'codechefUrl',
+    label: 'CodeChef',
+    icon: Trophy,
+    placeholder: 'https://codechef.com/users/your-username',
+    help: 'Your contest profile.',
+  },
+];
 
 export default function IntegrationsPage() {
   const { data: session } = useSession();
@@ -33,24 +79,22 @@ export default function IntegrationsPage() {
   const qc = useQueryClient();
   const config = useConfig();
 
-  const { data } = useQuery({
-    enabled: !!token,
-    queryKey: ['integrations'],
-    queryFn: () => api<Integration[]>('/integrations', { token }),
-  });
-
   const { data: profile } = useQuery({
     enabled: !!token,
     queryKey: ['profile.me'],
     queryFn: () => api<Profile>('/profile/me', { token }),
   });
 
-  const connectGithub = useMutation({
-    mutationFn: () =>
-      api<{ url: string }>('/integrations/github/connect', { method: 'POST', token }),
-    onSuccess: (res) => {
-      if (res?.url) window.location.href = res.url;
+  // Save a single profile link. The API validates the host (e.g. github.com)
+  // and returns "This doesn't look like a GitHub URL" on a mismatch.
+  const saveLink = useMutation({
+    mutationFn: (body: Partial<Record<LinkKey, string | null>>) =>
+      api('/profile/me', { method: 'PATCH', token, body: JSON.stringify(body) }),
+    onSuccess: () => {
+      toast.success('Saved');
+      qc.invalidateQueries({ queryKey: ['profile.me'] });
     },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   const connectDigiLocker = useMutation({
@@ -70,18 +114,6 @@ export default function IntegrationsPage() {
     else toast.error("Couldn't link DigiLocker. Please try again.");
     window.history.replaceState({}, '', window.location.pathname);
   }, []);
-
-  const sync = useMutation({
-    mutationFn: (provider: string) =>
-      api(`/integrations/${provider}/sync`, { method: 'POST', token }),
-    onSuccess: () => {
-      toast.success('Sync started');
-      qc.invalidateQueries({ queryKey: ['integrations'] });
-    },
-    onError: (e) => toast.error((e as Error).message),
-  });
-
-  const byProvider = Object.fromEntries((data ?? []).map((i) => [i.provider, i]));
 
   // ---- Custom links ----
   const [links, setLinks] = useState<CustomLink[]>([]);
@@ -132,47 +164,25 @@ export default function IntegrationsPage() {
     <div className="space-y-4">
       <ProfileTabs />
       <div className="space-y-6">
-        {/* Built-in providers */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Github className="h-4 w-4" /> GitHub
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Imports your public repos as projects — needed for L3 verification.
-              </p>
-              {byProvider.github?.connected ? (
-                <div className="space-y-2">
-                  <Badge variant="success">Connected</Badge>
-                  <Button onClick={() => sync.mutate('github')} disabled={sync.isPending}>
-                    {sync.isPending ? 'Syncing…' : 'Sync now'}
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={() => connectGithub.mutate()}>Connect GitHub</Button>
-              )}
-            </CardContent>
-          </Card>
+        <div>
+          <h2 className="text-lg font-semibold">Your profiles</h2>
+          <p className="text-sm text-muted-foreground">
+            Paste your profile link. We check it&apos;s the right site and show it on your portfolio
+            as a clickable link.
+          </p>
+        </div>
 
-          {(['linkedin', 'leetcode', 'coursera'] as const).map((p) => (
-            <Card key={p}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 capitalize">
-                  {p === 'linkedin' ? <Linkedin className="h-4 w-4" /> : null}
-                  {p}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Badge variant="secondary">Coming soon</Badge>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  OAuth not live yet. For now, add the URL under <strong>Custom links</strong>{' '}
-                  below.
-                </p>
-              </CardContent>
-            </Card>
+        <div className="grid gap-4 md:grid-cols-2">
+          {LINK_PROVIDERS.map((p) => (
+            <ProfileLinkTile
+              key={p.key}
+              provider={p}
+              value={profile?.[p.key] ?? null}
+              saving={saveLink.isPending}
+              onSave={(url) =>
+                saveLink.mutate({ [p.key]: url } as Partial<Record<LinkKey, string | null>>)
+              }
+            />
           ))}
 
           <Card>
@@ -184,7 +194,7 @@ export default function IntegrationsPage() {
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 Imports your academic records and degree certificates directly from the
-                Govt-of-India DigiLocker registry — bypasses manual marksheet uploads.
+                Govt-of-India DigiLocker registry, bypassing manual marksheet uploads.
               </p>
               {config.digiLocker ? (
                 <Button
@@ -216,7 +226,7 @@ export default function IntegrationsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Add any profile link you want shown on your portfolio — Kaggle, HackerRank, personal
+              Add any other profile link to show on your portfolio: Kaggle, HackerRank, personal
               blog, Medium, Behance, anything.
             </p>
 
@@ -279,5 +289,79 @@ export default function IntegrationsPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function ProfileLinkTile({
+  provider,
+  value,
+  onSave,
+  saving,
+}: {
+  provider: (typeof LINK_PROVIDERS)[number];
+  value: string | null;
+  onSave: (url: string | null) => void;
+  saving: boolean;
+}) {
+  const Icon = provider.icon;
+  const [editing, setEditing] = useState(false);
+  const [url, setUrl] = useState(value ?? '');
+
+  useEffect(() => {
+    setUrl(value ?? '');
+    setEditing(false);
+  }, [value]);
+
+  const connected = !!value && !editing;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Icon className="h-4 w-4" /> {provider.label}
+          {connected && (
+            <Badge variant="success" className="ml-auto">
+              Added
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">{provider.help}</p>
+        {connected ? (
+          <div className="flex items-center justify-between gap-2">
+            <a
+              href={value ?? '#'}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline min-w-0"
+            >
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{value}</span>
+            </a>
+            <div className="flex gap-1 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                Change
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => onSave(null)} disabled={saving}>
+                Remove
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              placeholder={provider.placeholder}
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && url.trim() && onSave(url.trim())}
+            />
+            <Button size="sm" disabled={saving || !url.trim()} onClick={() => onSave(url.trim())}>
+              Save
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
