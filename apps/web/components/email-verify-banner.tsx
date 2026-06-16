@@ -29,7 +29,7 @@ export function EmailVerifyBanner() {
 
   const resend = useMutation({
     mutationFn: () => api('/auth/resend-verification', { method: 'POST', token }),
-    onSuccess: () => toast.success('Verification email sent — check your inbox.'),
+    onSuccess: () => toast.success('Verification email sent. Check your inbox.'),
     onError: (e) => toast.error((e as Error).message),
   });
 

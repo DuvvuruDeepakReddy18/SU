@@ -101,7 +101,7 @@ export default function MessageThreadPage({ params }: { params: { userId: string
       </header>
 
       {/* Transcript */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-2">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain py-4 space-y-2">
         {data.messages.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-8 text-center text-sm text-muted-foreground">

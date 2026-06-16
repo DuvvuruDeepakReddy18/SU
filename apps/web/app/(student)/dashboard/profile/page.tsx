@@ -136,7 +136,7 @@ export default function ProfilePage() {
       toast.success('Your profile has been filled in', { id: tid });
       qc.invalidateQueries({ queryKey: ['profile.me'] });
     } catch (err) {
-      toast.error('Resume parsing failed — ' + (err as Error).message.slice(0, 100), { id: tid });
+      toast.error('Resume parsing failed: ' + (err as Error).message.slice(0, 100), { id: tid });
     } finally {
       setParsing(false);
     }
@@ -163,7 +163,7 @@ export default function ProfilePage() {
       toast.success('Your profile has been filled in', { id: tid });
       qc.invalidateQueries({ queryKey: ['profile.me'] });
     } catch (err) {
-      toast.error('Resume parsing failed — ' + (err as Error).message.slice(0, 100), { id: tid });
+      toast.error('Resume parsing failed: ' + (err as Error).message.slice(0, 100), { id: tid });
     } finally {
       setParsing(false);
     }

@@ -109,7 +109,7 @@ export default function VerificationsPage() {
       });
       if (!res.ok) throw new Error((await res.text()).slice(0, 200));
       track(EVENTS.COLLEGE_ID_UPLOADED, { source: 'dashboard_reupload' });
-      toast.success('College ID uploaded — pending review', { id: tid });
+      toast.success('College ID uploaded, pending review', { id: tid });
       qc.invalidateQueries({ queryKey: ['profile.me'] });
     } catch (e) {
       toast.error((e as Error).message, { id: tid });
@@ -134,7 +134,7 @@ export default function VerificationsPage() {
         throw new Error(t.slice(0, 200));
       }
       track(EVENTS.MARKSHEET_UPLOADED, { semester });
-      toast.success('Marksheet uploaded — analysing…', { id: tid });
+      toast.success('Marksheet uploaded, analysing…', { id: tid });
       qc.invalidateQueries({ queryKey: ['verifications.academic-records'] });
       qc.invalidateQueries({ queryKey: ['profile.me'] });
       qc.invalidateQueries({ queryKey: ['verifications.summary'] });

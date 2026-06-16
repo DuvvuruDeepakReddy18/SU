@@ -114,7 +114,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto overscroll-contain">
             {notifications.length === 0 ? (
               <p className="px-3 py-8 text-center text-sm text-muted-foreground">
                 You&apos;re all caught up.

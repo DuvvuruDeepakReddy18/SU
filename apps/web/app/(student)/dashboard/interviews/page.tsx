@@ -83,7 +83,7 @@ export default function InterviewsPage() {
         }),
       }),
     onSuccess: () => {
-      toast.success('L4 interview booked — meeting link inside');
+      toast.success('L4 interview booked. Meeting link inside.');
       resetPicker();
     },
     onError: (e) => toast.error((e as Error).message),
@@ -145,7 +145,7 @@ export default function InterviewsPage() {
                 skillId: selectedSkillId,
               }),
             });
-            toast.success('Payment received — interview booked.');
+            toast.success('Payment received. Interview booked.');
             resetPicker();
           } catch (e) {
             toast.error(`Booking failed after payment: ${(e as Error).message}`);

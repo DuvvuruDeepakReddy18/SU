@@ -30,7 +30,7 @@ export default function PoolPage() {
   const claim = useMutation({
     mutationFn: (id: string) => api(`/interviewer/pool/${id}/claim`, { method: 'POST', token }),
     onSuccess: () => {
-      toast.success('Claimed — find it under My interviews');
+      toast.success('Claimed. Find it under My interviews.');
       qc.invalidateQueries({ queryKey: ['interviewer.pool'] });
       qc.invalidateQueries({ queryKey: ['interviewer.mine'] });
     },

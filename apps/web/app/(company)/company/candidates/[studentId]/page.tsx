@@ -95,7 +95,7 @@ export default function CandidateDetailPage() {
       }),
     onSuccess: () => {
       track(EVENTS.RECRUITER_INQUIRY_SENT);
-      toast.success('Message sent — you’ll be notified if they accept.');
+      toast.success('Message sent. You’ll be notified if they accept.');
       setShowInquiry(false);
       setMessage('');
     },

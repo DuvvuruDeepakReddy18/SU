@@ -130,7 +130,7 @@ export default function ProblemPage({ params }: { params: { slug: string } }) {
       }),
     onSuccess: (s) => {
       setSubmissionId(s.id);
-      toast.success('Submitted — running tests…');
+      toast.success('Submitted. Running tests…');
       qc.invalidateQueries({ queryKey: ['submission'] });
     },
     onError: (e) => toast.error((e as Error).message),

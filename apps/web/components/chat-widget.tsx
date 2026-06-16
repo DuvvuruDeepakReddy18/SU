@@ -176,7 +176,10 @@ export function ChatWidget() {
         </div>
 
         {/* Scrollable transcript */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-3 text-sm"
+        >
           {messages.map((m, i) => (
             <Bubble key={i} msg={m} />
           ))}
