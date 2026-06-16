@@ -15,6 +15,7 @@ import {
   Settings,
   Briefcase,
   MessageCircle,
+  Video,
 } from 'lucide-react';
 
 // Top-level sections only. Profile groups skills/verifications/integrations,
@@ -43,6 +44,7 @@ export const NAV: NavItem[] = [
     ],
   },
   { href: '/dashboard/practice', label: 'Practice', icon: Code2 },
+  { href: '/dashboard/interviews', label: 'Interviews', icon: Video },
   {
     href: '/dashboard/freelance',
     label: 'Opportunities',
@@ -52,7 +54,6 @@ export const NAV: NavItem[] = [
       '/dashboard/internships',
       '/dashboard/placements',
       '/dashboard/compete',
-      '/dashboard/interviews',
       '/dashboard/opportunities',
     ],
   },

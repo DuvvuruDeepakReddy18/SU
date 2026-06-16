@@ -18,7 +18,6 @@ import {
   ExternalLink,
   IndianRupee,
 } from 'lucide-react';
-import { OpportunitiesTabs } from '@/components/opportunities-tabs';
 
 type Booking = {
   id: string;
@@ -181,7 +180,6 @@ export default function InterviewsPage() {
 
   return (
     <div className="space-y-4">
-      <OpportunitiesTabs />
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
