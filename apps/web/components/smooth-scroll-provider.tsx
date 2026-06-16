@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Lenis from 'lenis';
 
 /**
@@ -13,7 +14,16 @@ import Lenis from 'lenis';
  * a scroll event Lenis happily picks up.
  */
 export function SmoothScrollProvider() {
+  const pathname = usePathname();
+
   useEffect(() => {
+    // ONLY smooth-scroll the marketing landing page. Lenis intercepts wheel
+    // events for the whole document, which breaks scrolling inside every inner
+    // list/dropdown/modal in the dashboards and portals — so everywhere except
+    // "/" keeps native scrolling. Re-runs on navigation, so leaving "/" tears
+    // Lenis down and restores native scroll.
+    if (pathname !== '/') return;
+
     const prefersReduced =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -44,7 +54,7 @@ export function SmoothScrollProvider() {
       cancelAnimationFrame(frame);
       lenis.destroy();
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }
