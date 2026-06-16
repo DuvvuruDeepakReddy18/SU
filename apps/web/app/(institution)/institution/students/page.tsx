@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { Search, Inbox, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Search, Inbox, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LAYER_META, initials } from '@/components/company/candidate-card';
 
@@ -155,15 +155,7 @@ export default function StudentsPage() {
                       </div>
                       <div className="flex flex-wrap gap-x-3 text-[11px] text-muted-foreground">
                         {s.courseProgram && <span>{s.courseProgram}</span>}
-                        {s.graduationYear && <span>Class of {s.graduationYear}</span>}
-                        {s.cgpa != null && (
-                          <span className="inline-flex items-center gap-0.5">
-                            CGPA {s.cgpa}
-                            {s.cgpaVerified && (
-                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                            )}
-                          </span>
-                        )}
+                        {/* CGPA + graduation year hidden until extraction is reliable. */}
                         {s.skills.length > 0 && <span>{s.skills.length} verified skills</span>}
                       </div>
                     </div>

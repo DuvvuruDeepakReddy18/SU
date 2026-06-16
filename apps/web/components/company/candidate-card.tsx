@@ -86,7 +86,7 @@ export function CandidateCardView({
                   <MapPin className="h-3 w-3" /> {c.location}
                 </span>
               )}
-              {c.graduationYear && <span>Class of {c.graduationYear}</span>}
+              {/* Graduation year hidden until extraction is reliable. */}
             </div>
           </div>
           {onToggleSave && (

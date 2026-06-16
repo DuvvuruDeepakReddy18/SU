@@ -59,25 +59,14 @@ export default function AnalyticsPage() {
         rows.push(...res.items);
         if (rows.length >= res.total || res.items.length === 0) break;
       }
-      const header = [
-        'Name',
-        'Course',
-        'Grad year',
-        'CGPA',
-        'CGPA verified',
-        'College ID',
-        'Top layer',
-        'Verified skills',
-      ];
+      // CGPA + grad year omitted until resume extraction is reliable.
+      const header = ['Name', 'Course', 'College ID', 'Top layer', 'Verified skills'];
       const csv = [
         header.join(','),
         ...rows.map((r) =>
           [
             csvCell(r.fullName),
             csvCell(r.courseProgram ?? ''),
-            r.graduationYear ?? '',
-            r.cgpa ?? '',
-            r.cgpaVerified ? 'yes' : 'no',
             r.collegeIdStatus ?? 'none',
             r.topLayer,
             csvCell(r.skills.map((s) => s.name).join('; ')),

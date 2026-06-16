@@ -156,16 +156,10 @@ export default function CandidateDetailPage() {
                   </span>
                 )}
                 {c.courseProgram && <span>{c.courseProgram}</span>}
-                {c.graduationYear && <span>Class of {c.graduationYear}</span>}
+                {/* CGPA + graduation year hidden until extraction is reliable. */}
                 {c.location && (
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-3 w-3" /> {c.location}
-                  </span>
-                )}
-                {c.cgpa != null && (
-                  <span>
-                    CGPA {c.cgpa}
-                    {c.cgpaVerified ? ' ✓' : ''}
                   </span>
                 )}
               </div>

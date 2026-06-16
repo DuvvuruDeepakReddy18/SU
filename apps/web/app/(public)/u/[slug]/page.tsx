@@ -279,8 +279,9 @@ export default async function PublicPortfolio({ params }: { params: { slug: stri
                   <GraduationCap className="h-4 w-4" /> {profile.user.institution.name}
                 </span>
               )}
-              {profile.cgpa != null && <span>CGPA · {profile.cgpa.toFixed(2)}</span>}
-              {profile.graduationYear && <span>Class of {profile.graduationYear}</span>}
+              {/* CGPA + graduation year hidden until resume extraction is
+                  reliable (it was picking up 12th-grade values). Data is still
+                  stored; re-enable here when verified-marksheet CGPA is wired. */}
               {profile.location && <span>{profile.location}</span>}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">

@@ -190,20 +190,8 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Stat row */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
-          label="CGPA"
-          value={profile?.cgpa != null ? profile.cgpa.toFixed(2) : '—'}
-          pill={
-            profile?.cgpa != null ? (
-              <VerificationPill
-                state={profile.cgpaVerifiedAt ? 'verified' : 'unverified'}
-                size="xs"
-              />
-            ) : undefined
-          }
-        />
+      {/* Stat row — CGPA tile hidden until resume extraction is reliable. */}
+      <div className="grid gap-4 md:grid-cols-3">
         <StatCard
           label="Skills verified"
           value={`${layerCounts.L1_ACADEMIC + layerCounts.L2_CERTIFIED + layerCounts.L3_PROVEN + layerCounts.L4_EXPERT}/${totalSkills}`}

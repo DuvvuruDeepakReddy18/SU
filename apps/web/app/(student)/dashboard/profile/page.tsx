@@ -110,7 +110,7 @@ export default function ProfilePage() {
     if (p.portfolioUrl) populated.push('portfolio');
     if (p.skills?.length) populated.push(`${p.skills.length} skills`);
     if (p.projects?.length) populated.push(`${p.projects.length} projects`);
-    if (p.education?.length) populated.push('CGPA + graduation year');
+    if (p.education?.length) populated.push('education history');
     return populated;
   }
 
@@ -287,28 +287,10 @@ export default function ProfilePage() {
                     onChange={(e) => setForm({ ...form, location: e.target.value })}
                   />
                 </Row>
-                <Row label="CGPA">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.cgpa ?? ''}
-                    onChange={(e) =>
-                      setForm({ ...form, cgpa: e.target.value ? Number(e.target.value) : null })
-                    }
-                  />
-                </Row>
-                <Row label="Graduation year">
-                  <Input
-                    type="number"
-                    value={form.graduationYear ?? ''}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        graduationYear: e.target.value ? Number(e.target.value) : null,
-                      })
-                    }
-                  />
-                </Row>
+                {/* CGPA + graduation year inputs hidden until resume extraction
+                    is reliable (it was reading 12th-grade values). The fields
+                    still exist on the model; re-enable when verified-marksheet
+                    CGPA is the source of truth. */}
               </div>
             </CardContent>
           </Card>
@@ -457,11 +439,7 @@ export default function ProfilePage() {
                 <div className="grid gap-3 md:grid-cols-2">
                   <ReadField label="Phone" value={profile.phone} />
                   <ReadField label="Location" value={profile.location} />
-                  <ReadField label="CGPA" value={profile.cgpa?.toFixed(2) ?? null} />
-                  <ReadField
-                    label="Graduation year"
-                    value={profile.graduationYear?.toString() ?? null}
-                  />
+                  {/* CGPA + graduation year hidden until extraction is reliable. */}
                 </div>
               </CardContent>
             </Card>
@@ -557,8 +535,8 @@ function UploadHero({
         </div>
         <h2 className="text-2xl font-semibold text-center">Start with your resume</h2>
         <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto text-center">
-          We&apos;ll read it with AI and fill your profile — bio, skills, projects, GitHub,
-          LinkedIn, CGPA — in a few seconds. You can review and tweak after.
+          We&apos;ll read it with AI and fill your profile (bio, skills, projects, GitHub, LinkedIn)
+          in a few seconds. You can review and tweak after.
         </p>
 
         {/* Mode tabs: upload PDF vs paste text */}
