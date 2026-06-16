@@ -12,6 +12,7 @@ import { api, API_BASE } from '@/lib/api';
 import { Upload, ShieldCheck, FileText, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { EVENTS, track } from '@/lib/analytics';
 import { ProfileTabs } from '@/components/profile-tabs';
+import { semestersForCourse } from '@skillverify/shared';
 
 type Profile = {
   collegeIdUrl: string | null;
@@ -50,34 +51,6 @@ type Summary = {
   projects: { id: string; title: string; linkedSkills: string[]; repoUrl: string | null }[];
 };
 
-const SEMESTERS_BY_COURSE: Record<string, number> = {
-  'B.Tech': 8,
-  'B.E.': 8,
-  'B.Arch': 10,
-  LLB: 10,
-  MBBS: 10,
-  BDS: 10,
-  'M.Tech': 4,
-  'M.E.': 4,
-  MBA: 4,
-  MCA: 4,
-  'M.Sc': 4,
-  'M.A.': 4,
-  'M.Com': 4,
-  'M.Arch': 4,
-  'M.Pharma': 4,
-  LLM: 4,
-  'B.Sc': 6,
-  'B.A.': 6,
-  'B.Com': 6,
-  BBA: 6,
-  BCA: 6,
-  'B.Pharma': 8,
-  MD: 6,
-  PhD: 6,
-  Other: 8,
-};
-
 export default function VerificationsPage() {
   const { data: session } = useSession();
 
@@ -102,7 +75,13 @@ export default function VerificationsPage() {
     queryFn: () => api<Summary>('/verifications/me/summary', { token }),
   });
 
-  const totalSemesters = SEMESTERS_BY_COURSE[profile?.courseProgram ?? 'B.Tech'] ?? 8;
+  // Semester grid: start from the course default, never show fewer than the
+  // student has already uploaded, and let them add more — program length varies
+  // by institution, so the default is a starting point, not a hard limit.
+  const [extraSemesters, setExtraSemesters] = useState(0);
+  const baseSemesters = semestersForCourse(profile?.courseProgram);
+  const maxRecorded = (records ?? []).reduce((m, r) => Math.max(m, r.semester), 0);
+  const totalSemesters = Math.max(baseSemesters, maxRecorded) + extraSemesters;
   const bySemester = new Map((records ?? []).map((r) => [r.semester, r]));
 
   const collegeIdState = (() => {
@@ -311,6 +290,23 @@ export default function VerificationsPage() {
                   />
                 );
               })}
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={() => setExtraSemesters((n) => n + 1)}>
+                + Add a semester
+              </Button>
+              {extraSemesters > 0 && maxRecorded < totalSemesters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExtraSemesters((n) => Math.max(0, n - 1))}
+                >
+                  Remove last
+                </Button>
+              )}
+              <span className="text-xs text-muted-foreground">
+                Program longer than {baseSemesters} semesters? Add more.
+              </span>
             </div>
           </CardContent>
         </Card>

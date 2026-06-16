@@ -68,6 +68,40 @@ export function coursesForCategory(category?: string | null): readonly CoursePro
   }
 }
 
+// Default semester count for a course (semesters ≈ years × 2), used to lay out
+// the marksheet-verification grid. Program length varies by institution, so the
+// verification page treats this as a starting point students can extend.
+export function semestersForCourse(courseProgram?: string | null): number {
+  const map: Record<string, number> = {
+    'B.Tech': 8,
+    'B.E.': 8,
+    'B.Arch': 10,
+    MBBS: 9,
+    BDS: 8,
+    LLB: 10,
+    'B.Sc': 6,
+    'B.A.': 6,
+    'B.Com': 6,
+    BBA: 6,
+    BCA: 6,
+    'B.Pharma': 8,
+    'M.Tech': 4,
+    'M.E.': 4,
+    MBA: 4,
+    MCA: 4,
+    'M.Sc': 4,
+    'M.A.': 4,
+    'M.Com': 4,
+    'M.Arch': 4,
+    'M.Pharma': 4,
+    LLM: 4,
+    MD: 6,
+    PhD: 6,
+    Other: 8,
+  };
+  return map[courseProgram ?? ''] ?? 8;
+}
+
 export const SignupSchema = z.object({
   // Legal name as it appears on the college ID — used for verification matching.
   governmentName: z.string().min(2).max(120),
