@@ -51,6 +51,7 @@ type ServiceDetail = {
       highestVerificationLayer: string;
       skill: { name: string };
     }[];
+    projects: { id: string; title: string; repoUrl: string | null; liveUrl: string | null }[];
   };
 };
 
@@ -129,7 +130,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
               <span>·</span>
               <span className="flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />
-                {service.isRemote ? 'Remote' : (service.location ?? '—')}
+                {service.isRemote ? 'Remote' : (service.location ?? 'Onsite')}
               </span>
             </div>
           </div>
@@ -156,6 +157,53 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                     </Badge>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Proof of work — the provider's verified projects (real repos/demos
+              beat a self-claimed portfolio). */}
+          {service.provider.projects.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Proof of work</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Projects from {p?.fullName.split(' ')[0] ?? 'the provider'}&apos;s portfolio.
+                </p>
+                <ul className="space-y-2">
+                  {service.provider.projects.map((pr) => (
+                    <li
+                      key={pr.id}
+                      className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm"
+                    >
+                      <span className="font-medium truncate">{pr.title}</span>
+                      <span className="flex gap-3 shrink-0 text-xs">
+                        {pr.repoUrl && (
+                          <a
+                            href={pr.repoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            Code ↗
+                          </a>
+                        )}
+                        {pr.liveUrl && (
+                          <a
+                            href={pr.liveUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            Live ↗
+                          </a>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           )}
@@ -280,7 +328,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-lg">
             <CardHeader>
-              <CardTitle className="text-base">Send inquiry — {service.title}</CardTitle>
+              <CardTitle className="text-base">Send inquiry: {service.title}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>

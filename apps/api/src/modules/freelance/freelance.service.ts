@@ -65,6 +65,13 @@ export class FreelanceService {
               where: { highestVerificationLayer: { not: 'L0_UNVERIFIED' } },
               take: 8,
             },
+            // Proof of work: the provider's projects (verified work beats a
+            // free-text claim — clients see real repos/demos).
+            projects: {
+              select: { id: true, title: true, repoUrl: true, liveUrl: true },
+              orderBy: { createdAt: 'desc' },
+              take: 6,
+            },
           },
         },
       },
