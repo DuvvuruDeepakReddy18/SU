@@ -19,7 +19,7 @@ const SUGGESTIONS = [
 const GREETING: Msg = {
   role: 'assistant',
   content:
-    "Hey — I'm SkillBot. I can explain how verification works, help you find verified peers in your college, or point you at the right page. What's up?",
+    "Hi, I'm SkillBot. Ask me about your college (admissions, courses, campuses), how verification works, or to find verified peers in your institution. What's up?",
 };
 
 const MAX_PERSISTED = 50; // last N turns; keeps localStorage small

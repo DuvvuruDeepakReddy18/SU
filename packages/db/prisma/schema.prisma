@@ -131,11 +131,28 @@ model Institution {
   users         User[]
   admins        InstitutionAdminProfile[]
   competitions  Competition[]
+  knowledge     InstitutionKnowledge[]
   createdAt     DateTime @default(now())
 
   @@index([category])
   @@index([nirfRank])
   @@index([name])
+}
+
+// Knowledge base for the institution Q&A chatbot. Each row is a fact/snippet
+// about a specific college (admissions, fees, facilities, contacts, …). The
+// chatbot answers ONLY from these rows for college-specific questions, so it
+// can't hallucinate. Populated by admins/TPOs per institution.
+model InstitutionKnowledge {
+  id            String      @id @default(cuid())
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  title         String
+  content       String
+  source        String?
+  createdAt     DateTime    @default(now())
+
+  @@index([institutionId])
 }
 
 model StudentProfile {

@@ -77,6 +77,16 @@ export class ChatService {
           'No verified peers in the same institution matched. Suggest the user broaden their search or invite a peer.';
         usedRetrieval = true;
       }
+    } else if (profile?.user.institution) {
+      // College Q&A: pull the institution's own knowledge base so the bot can
+      // answer college-specific questions ONLY from verified facts (no hallucination).
+      const facts = await this.findInstitutionKnowledge(profile.user.institution.id, latest);
+      if (facts.length > 0) {
+        retrieval =
+          `COLLEGE INFO for ${profile.user.institution.name} (answer college-specific questions ONLY from these facts):\n` +
+          facts.map((f, i) => `${i + 1}. [${f.title}] ${f.content}`).join('\n');
+        usedRetrieval = true;
+      }
     }
 
     const system = this.buildSystemPrompt(profile, retrieval);
@@ -160,6 +170,29 @@ export class ChatService {
       .slice(0, 5);
   }
 
+  /**
+   * Keyword retrieval over the institution's knowledge base. Returns matching
+   * facts (or none). The chat() flow injects these as grounding context so the
+   * bot answers college questions only from real data.
+   */
+  private async findInstitutionKnowledge(institutionId: string, query: string) {
+    const words = query
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length >= 4 && !STOPWORDS.has(w))
+      .slice(0, 8);
+    if (words.length === 0) return [];
+    return this.prisma.institutionKnowledge.findMany({
+      where: {
+        institutionId,
+        OR: words.map((w) => ({ content: { contains: w, mode: 'insensitive' as const } })),
+      },
+      select: { title: true, content: true },
+      take: 8,
+    });
+  }
+
   private buildSystemPrompt(
     profile: {
       fullName: string;
@@ -180,7 +213,13 @@ What you help with:
 - Suggest practice domains or competitions based on their stated interests
 
 Keep replies under 6 sentences unless the user explicitly asks for detail. Use bullet points when listing.
-Never invent URLs or stats. If you don't know, say so and point to the right page (/dashboard/profile, /dashboard/verifications, /dashboard/practice, /support).
+Never invent URLs or stats.
+
+ANSWERING QUESTIONS ABOUT THE STUDENT'S COLLEGE (admissions, fees, courses, hostel, placements, scholarships, deadlines, departments, contacts, etc.):
+- Use ONLY the "COLLEGE INFO" facts in the retrieval context below. Quote them faithfully.
+- If the needed fact is NOT in that context, DO NOT guess and DO NOT rely on general knowledge about the college. Say you don't have that detail yet, and suggest they contact their college / TPO office for the exact answer.
+
+For SkillVerify platform questions (verification, practice, finding peers), answer normally; if unsure, point to the right page (/dashboard/profile, /dashboard/verifications, /dashboard/practice, /support).
 
 ${retrieval ? `--- RETRIEVAL CONTEXT (injected this turn) ---\n${retrieval}\n--- END CONTEXT ---\n\nUse this context to answer; if it's empty for a "find me X" request, explain that gracefully.` : ''}`;
   }
