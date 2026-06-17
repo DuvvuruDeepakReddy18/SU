@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { CodeRunner } from './code-runner';
@@ -45,7 +45,38 @@ export class PracticeService {
       include: { testCases: { where: { isHidden: false } } },
     });
     if (!problem) throw new NotFoundException('Problem not found');
-    return problem;
+    // Never leak the MCQ answer / rationale before the student submits.
+    const safe = { ...problem } as Record<string, unknown>;
+    delete safe.correctOption;
+    delete safe.explanation;
+    return safe;
+  }
+
+  /**
+   * Grade an MCQ / case-study answer. No code runner — just match the chosen
+   * option against the stored answer, persist an AC/WA submission (so it counts
+   * toward solved/points/leaderboard like any problem), and reveal the rationale.
+   */
+  async submitMcq(userId: string, problemId: string, selectedOption: number) {
+    const problem = await this.prisma.problem.findUnique({
+      where: { id: problemId },
+      select: { id: true, kind: true, correctOption: true, explanation: true },
+    });
+    if (!problem) throw new NotFoundException('Problem not found');
+    if (problem.kind !== 'mcq') {
+      throw new BadRequestException('This problem is not multiple-choice.');
+    }
+    const correct = problem.correctOption != null && selectedOption === problem.correctOption;
+    await this.prisma.submission.create({
+      data: {
+        userId,
+        problemId: problem.id,
+        language: 'mcq',
+        code: String(selectedOption),
+        verdict: correct ? 'AC' : 'WA',
+      },
+    });
+    return { correct, correctOption: problem.correctOption, explanation: problem.explanation };
   }
 
   async submit(userId: string, dto: SubmissionCreateDto) {

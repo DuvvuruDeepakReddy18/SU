@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { createZodDto } from 'nestjs-zod';
 import { SUPPORTED_LANGUAGES } from '@skillverify/shared';
 import { PracticeService } from './practice.service';
-import { ProblemsQueryDto, SubmissionCreateDto } from './dto';
+import { ProblemsQueryDto, SubmissionCreateDto, McqSubmissionDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { JwtPayload } from '@skillverify/shared';
@@ -49,6 +49,12 @@ export class PracticeController {
   @Post('submissions')
   submit(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: SubmissionCreateDto) {
     return this.svc.submit(u.sub, dto);
+  }
+
+  // MCQ / case-study answer — graded by matching, no code runner.
+  @Post('submissions/mcq')
+  submitMcq(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: McqSubmissionDto) {
+    return this.svc.submitMcq(u.sub, dto.problemId, dto.selectedOption);
   }
 
   @Get('submissions')

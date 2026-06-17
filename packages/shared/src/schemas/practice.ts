@@ -8,6 +8,13 @@ export const SubmissionCreateSchema = z.object({
 });
 export type SubmissionCreateInput = z.infer<typeof SubmissionCreateSchema>;
 
+// MCQ / case-study answer: pick one option by index.
+export const McqSubmissionSchema = z.object({
+  problemId: z.string().cuid(),
+  selectedOption: z.number().int().min(0).max(25),
+});
+export type McqSubmissionInput = z.infer<typeof McqSubmissionSchema>;
+
 export const ProblemsQuerySchema = z.object({
   topic: z.string().optional(),
   difficulty: z.enum(['easy', 'medium', 'hard']).optional(),

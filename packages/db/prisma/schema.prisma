@@ -331,6 +331,12 @@ model Problem {
   examplesJson Json
   starterCode  Json?            // { python, javascript, cpp, java }
   points       Int              @default(10)
+  // Question type. "code" = run-and-judge (default). "mcq" = case-study /
+  // multiple-choice (Law, Commerce, …) graded by matching correctOption.
+  kind          String          @default("code")
+  options       String[]        // MCQ choices; empty for code problems
+  correctOption Int?            // index into options; null for code problems
+  explanation   String?         // shown after answering an MCQ
   testCases    TestCase[]
   submissions  Submission[]
   domains      PracticeDomain[] @relation("DomainProblems")

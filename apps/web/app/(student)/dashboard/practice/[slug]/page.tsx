@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ProblemLeaderboard } from '@/components/problem-leaderboard';
 import { EVENTS, track } from '@/lib/analytics';
@@ -35,6 +37,8 @@ type Problem = {
   constraints: string | null;
   examplesJson: { input: string; output: string }[];
   starterCode: Record<string, string>;
+  kind?: 'code' | 'mcq';
+  options?: string[];
 };
 
 type FailedTest = {
@@ -171,6 +175,12 @@ export default function ProblemPage({ params }: { params: { slug: string } }) {
   });
 
   if (!problem) return <div className="animate-pulse h-96 rounded bg-secondary" />;
+
+  // Case-study / MCQ problems (Law, Commerce, …) use a multiple-choice view
+  // instead of the code editor + runner.
+  if (problem.kind === 'mcq') {
+    return <McqProblem problem={problem} token={token} />;
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr] h-[calc(100vh-9rem)]">
@@ -720,6 +730,118 @@ function Bullets({
           <li key={i}>{it}</li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/** Multiple-choice / case-study view for kind="mcq" problems. */
+function McqProblem({ problem, token }: { problem: Problem; token: string | undefined }) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const [result, setResult] = useState<{
+    correct: boolean;
+    correctOption: number | null;
+    explanation: string | null;
+  } | null>(null);
+
+  const submit = useMutation({
+    mutationFn: () =>
+      api<{ correct: boolean; correctOption: number | null; explanation: string | null }>(
+        '/practice/submissions/mcq',
+        {
+          method: 'POST',
+          token,
+          body: JSON.stringify({ problemId: problem.id, selectedOption: selected }),
+        },
+      ),
+    onSuccess: (r) => {
+      setResult(r);
+      if (r.correct) toast.success('Correct!');
+      else toast.error('Not quite. Read the explanation.');
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <Link
+        href="/dashboard/practice"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        ← Practice
+      </Link>
+      <div>
+        <Badge variant="outline" className="capitalize">
+          {problem.difficulty}
+        </Badge>
+        <h1 className="mt-2 text-2xl font-semibold">{problem.title}</h1>
+        {problem.topics.length > 0 && (
+          <div className="mt-1 text-xs text-muted-foreground">{problem.topics.join(' · ')}</div>
+        )}
+      </div>
+
+      <Card>
+        <CardContent className="space-y-5 p-5">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{problem.description}</p>
+
+          <div className="space-y-2">
+            {problem.options?.map((opt, i) => {
+              const isSel = selected === i;
+              const isAnswer = !!result && result.correctOption === i;
+              const isWrongPick = !!result && isSel && !result.correct;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={!!result || !token}
+                  onClick={() => setSelected(i)}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-md border p-3 text-left text-sm transition disabled:cursor-default',
+                    isAnswer
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                      : isWrongPick
+                        ? 'border-destructive bg-destructive/5'
+                        : isSel
+                          ? 'border-primary bg-primary/5'
+                          : 'hover:bg-secondary/40',
+                  )}
+                >
+                  <span className="font-semibold">{String.fromCharCode(65 + i)}.</span>
+                  <span>{opt}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {!result ? (
+            <Button
+              disabled={selected === null || submit.isPending || !token}
+              onClick={() => submit.mutate()}
+            >
+              {submit.isPending ? 'Checking…' : 'Submit answer'}
+            </Button>
+          ) : (
+            <div
+              className={cn(
+                'rounded-md border p-4 text-sm',
+                result.correct
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                  : 'border-amber-500 bg-amber-50 dark:bg-amber-950/30',
+              )}
+            >
+              <div className="font-medium">{result.correct ? '✓ Correct' : '✗ Incorrect'}</div>
+              {result.explanation && (
+                <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                  {result.explanation}
+                </p>
+              )}
+            </div>
+          )}
+
+          {!token && (
+            <p className="text-xs text-muted-foreground">Sign in to submit your answer.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
