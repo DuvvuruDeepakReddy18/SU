@@ -1,7 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { InstitutionAdminService } from './institution-admin.service';
-import { RosterQueryDto, InstituteDriveDto, InstituteCompetitionDto } from './dto';
+import {
+  RosterQueryDto,
+  InstituteDriveDto,
+  InstituteCompetitionDto,
+  InstituteKnowledgeDto,
+} from './dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '@skillverify/shared';
@@ -64,5 +69,22 @@ export class InstitutionAdminController {
   @Delete('competitions/:id')
   deleteCompetition(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
     return this.svc.deleteCompetition(u.sub, id);
+  }
+
+  // ---------- Chatbot knowledge base ----------
+
+  @Get('knowledge')
+  listKnowledge(@CurrentUser() u: JwtPayload) {
+    return this.svc.listKnowledge(u.sub);
+  }
+
+  @Post('knowledge')
+  addKnowledge(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: InstituteKnowledgeDto) {
+    return this.svc.addKnowledge(u.sub, dto);
+  }
+
+  @Delete('knowledge/:id')
+  deleteKnowledge(@CurrentUser() u: JwtPayload, @Param('id') id: string) {
+    return this.svc.deleteKnowledge(u.sub, id);
   }
 }

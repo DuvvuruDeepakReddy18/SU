@@ -3,8 +3,10 @@ import {
   RosterQuerySchema,
   InstituteDriveSchema,
   InstituteCompetitionSchema,
+  InstituteKnowledgeSchema,
 } from '@skillverify/shared';
 
 export class RosterQueryDto extends createZodDto(RosterQuerySchema) {}
 export class InstituteDriveDto extends createZodDto(InstituteDriveSchema) {}
 export class InstituteCompetitionDto extends createZodDto(InstituteCompetitionSchema) {}
+export class InstituteKnowledgeDto extends createZodDto(InstituteKnowledgeSchema) {}

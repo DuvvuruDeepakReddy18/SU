@@ -51,3 +51,11 @@ export const RosterQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(24),
 });
 export type RosterQueryInput = z.infer<typeof RosterQuerySchema>;
+
+// A knowledge-base fact a TPO adds for the chatbot to answer their students from.
+export const InstituteKnowledgeSchema = z.object({
+  title: z.string().min(2).max(120),
+  content: z.string().min(5).max(2000),
+  source: z.string().max(200).optional(),
+});
+export type InstituteKnowledgeInput = z.infer<typeof InstituteKnowledgeSchema>;

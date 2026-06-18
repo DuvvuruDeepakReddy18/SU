@@ -4,6 +4,7 @@ import type {
   RosterQueryInput,
   InstituteDriveInput,
   InstituteCompetitionInput,
+  InstituteKnowledgeInput,
 } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
@@ -264,6 +265,38 @@ export class InstitutionAdminService {
       throw new NotFoundException('Competition not found');
     }
     await this.prisma.competition.delete({ where: { id: competitionId } });
+    return { ok: true };
+  }
+
+  // ---------- Chatbot knowledge base (approved TPOs) ----------
+
+  async listKnowledge(userId: string) {
+    const institutionId = await this.requireInstitution(userId);
+    return this.prisma.institutionKnowledge.findMany({
+      where: { institutionId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async addKnowledge(userId: string, dto: InstituteKnowledgeInput) {
+    const institutionId = await this.requireInstitution(userId);
+    return this.prisma.institutionKnowledge.create({
+      data: {
+        institutionId,
+        title: dto.title.trim(),
+        content: dto.content.trim(),
+        source: dto.source?.trim() || 'tpo',
+      },
+    });
+  }
+
+  async deleteKnowledge(userId: string, id: string) {
+    const institutionId = await this.requireInstitution(userId);
+    const row = await this.prisma.institutionKnowledge.findUnique({ where: { id } });
+    if (!row || row.institutionId !== institutionId) {
+      throw new NotFoundException('Knowledge entry not found');
+    }
+    await this.prisma.institutionKnowledge.delete({ where: { id } });
     return { ok: true };
   }
 }

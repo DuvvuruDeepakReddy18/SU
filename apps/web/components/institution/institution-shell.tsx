@@ -15,6 +15,7 @@ import {
   BarChart3,
   Briefcase,
   Trophy,
+  Bot,
   LogOut,
   Loader2,
   Clock,
@@ -34,6 +35,7 @@ const NAV = [
   { href: '/institution/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/institution/drives', label: 'Campus drives', icon: Briefcase },
   { href: '/institution/competitions', label: 'Competitions', icon: Trophy },
+  { href: '/institution/knowledge', label: 'Chatbot KB', icon: Bot },
 ];
 
 export function InstitutionShell({ children }: { children: React.ReactNode }) {
