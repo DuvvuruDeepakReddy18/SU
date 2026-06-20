@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { verificationLayerLabel } from '@skillverify/shared';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
 import { ProfileTabs } from '@/components/profile-tabs';
@@ -17,6 +18,7 @@ type UserSkill = {
   id: string;
   selfRatedLevel: number;
   highestVerificationLayer: string;
+  l4VerificationMethod: string | null;
   skill: Skill;
 };
 
@@ -108,7 +110,7 @@ export default function SkillsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={LAYER_COLORS[us.highestVerificationLayer] ?? 'secondary'}>
-                      {us.highestVerificationLayer.replace('_', ' ')}
+                      {verificationLayerLabel(us.highestVerificationLayer, us.l4VerificationMethod)}
                     </Badge>
                     <Button size="icon" variant="ghost" onClick={() => remove.mutate(us.id)}>
                       <Trash2 className="h-4 w-4" />

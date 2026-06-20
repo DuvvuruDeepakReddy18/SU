@@ -29,6 +29,14 @@ enum VerificationLayer {
   L4_EXPERT
 }
 
+// How an L4 badge was earned — AI screening alone vs a human expert panel. Lets
+// the credential badge show "AI-Verified L4" vs "Expert-Verified L4" so
+// recruiters can calibrate trust per skill. Null until a skill reaches L4.
+enum L4VerificationMethod {
+  AI_VERIFIED
+  EXPERT_VERIFIED
+}
+
 enum CertificationTier {
   TIER_1
   TIER_2
@@ -238,6 +246,7 @@ model UserSkill {
   skill                    SkillCatalog      @relation(fields: [skillId], references: [id])
   selfRatedLevel           Int               @default(1)
   highestVerificationLayer VerificationLayer @default(L0_UNVERIFIED)
+  l4VerificationMethod     L4VerificationMethod?
   createdAt                DateTime          @default(now())
 
   @@unique([userId, skillId])
