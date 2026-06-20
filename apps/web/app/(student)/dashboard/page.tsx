@@ -36,12 +36,15 @@ type Summary = {
 
 type Sub = { verdict: string; problem: { points?: number; difficulty?: string } };
 
-function levelFromPoints(pts: number): string {
-  if (pts >= 1000) return 'L4';
-  if (pts >= 500) return 'L3';
-  if (pts >= 200) return 'L2';
-  if (pts >= 50) return 'L1';
-  return 'L0';
+// Gamified practice rank. Named tiers (not "L1–L4") so it never collides with
+// the verification layers (L1 Academic … L4 Expert) shown elsewhere on this
+// page — a recruiter should never wonder whether "L4" means a badge or a score.
+function rankFromPoints(pts: number): string {
+  if (pts >= 1000) return 'Platinum';
+  if (pts >= 500) return 'Gold';
+  if (pts >= 200) return 'Silver';
+  if (pts >= 50) return 'Bronze';
+  return 'Rookie';
 }
 
 export default async function DashboardPage() {
@@ -65,7 +68,7 @@ export default async function DashboardPage() {
     const p = JSON.parse(key) as { points?: number };
     return sum + (p.points ?? 10);
   }, 0);
-  const level = levelFromPoints(points);
+  const rank = rankFromPoints(points);
 
   const layerCounts = {
     L1_ACADEMIC:
@@ -118,7 +121,7 @@ export default async function DashboardPage() {
         )}
       </header>
 
-      {/* Hero row: points + level + portfolio link */}
+      {/* Hero row: points + practice rank + portfolio link */}
       <div className="grid gap-4 lg:grid-cols-[1fr_350px]">
         <Card>
           <CardContent className="p-6 flex items-center justify-between">
@@ -133,9 +136,9 @@ export default async function DashboardPage() {
             </div>
             <div className="text-right">
               <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Your level
+                Practice rank
               </div>
-              <div className="mt-1 text-4xl font-semibold text-primary">{level}</div>
+              <div className="mt-1 text-3xl font-semibold text-primary">{rank}</div>
             </div>
           </CardContent>
         </Card>
