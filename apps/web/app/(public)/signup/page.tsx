@@ -22,7 +22,11 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [instituteEmail, setInstituteEmail] = useState('');
   const [institution, setInstitution] = useState<Institution | null>(null);
-  const [courseProgram, setCourseProgram] = useState<string>('B.Tech');
+  const [courseSelect, setCourseSelect] = useState<string>('B.Tech');
+  const [courseOther, setCourseOther] = useState('');
+  // Effective course sent to the API: the typed value when "Other" is picked,
+  // otherwise the dropdown selection.
+  const courseProgram = courseSelect === 'Other' ? courseOther.trim() : courseSelect;
   const [collegeIdFile, setCollegeIdFile] = useState<File | null>(null);
   const [collegeIdKey, setCollegeIdKey] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -33,10 +37,11 @@ export default function SignupPage() {
   // isn't offered.
   useEffect(() => {
     const courses = coursesForCategory(institution?.category);
-    if (!(courses as readonly string[]).includes(courseProgram)) {
-      setCourseProgram(courses[0]);
+    if (!(courses as readonly string[]).includes(courseSelect)) {
+      setCourseSelect(courses[0]);
+      setCourseOther('');
     }
-  }, [institution?.category, courseProgram]);
+  }, [institution?.category, courseSelect]);
 
   async function uploadCollegeId(file: File) {
     setUploading(true);
@@ -78,6 +83,10 @@ export default function SignupPage() {
     }
     if (!/^\+91\d{10}$/.test(phoneNumber)) {
       toast.error('Mobile must be +91 followed by 10 digits.');
+      return;
+    }
+    if (courseSelect === 'Other' && courseProgram.length < 2) {
+      toast.error('Please type your course.');
       return;
     }
 
@@ -170,8 +179,8 @@ export default function SignupPage() {
                   Course <span className="text-destructive">*</span>
                 </label>
                 <select
-                  value={courseProgram}
-                  onChange={(e) => setCourseProgram(e.target.value)}
+                  value={courseSelect}
+                  onChange={(e) => setCourseSelect(e.target.value)}
                   className="mt-1 flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 text-sm"
                   required
                 >
@@ -181,6 +190,16 @@ export default function SignupPage() {
                     </option>
                   ))}
                 </select>
+                {courseSelect === 'Other' && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Type your course, e.g. B.Tech Mechatronics"
+                    value={courseOther}
+                    onChange={(e) => setCourseOther(e.target.value)}
+                    maxLength={100}
+                    required
+                  />
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium">

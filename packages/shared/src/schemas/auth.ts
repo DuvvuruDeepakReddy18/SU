@@ -3,30 +3,61 @@ import { z } from 'zod';
 // Course programs surfaced in the signup dropdown. Drives the number of
 // semester tiles on the Verification Center (B.Tech = 8, MBA = 4, etc.).
 export const COURSE_PROGRAMS = [
+  // Engineering / Architecture / Design
   'B.Tech',
   'B.E.',
   'M.Tech',
   'M.E.',
+  'B.Arch',
+  'M.Arch',
+  'B.Planning',
+  'B.Des',
+  'M.Des',
+  'Integrated M.Tech',
+  'Diploma (Engineering)',
+  // Computer applications
+  'BCA',
+  'MCA',
+  // Science
   'B.Sc',
   'M.Sc',
-  'B.A.',
-  'M.A.',
+  'BS-MS (Integrated)',
+  'B.Sc (Agriculture)',
+  'B.Sc (Nursing)',
+  // Commerce / Management
   'B.Com',
   'M.Com',
   'BBA',
   'MBA',
-  'BCA',
-  'MCA',
-  'B.Arch',
-  'M.Arch',
-  'MBBS',
-  'MD',
-  'BDS',
-  'B.Pharma',
-  'M.Pharma',
+  'PGDM',
+  'BMS',
+  // Arts / Humanities / Education / Fine Arts
+  'B.A.',
+  'M.A.',
+  'BFA',
+  'B.Ed',
+  'B.Voc',
+  'B.Lib',
+  // Law
+  'B.A. LLB',
+  'BBA LLB',
+  'B.Com LLB',
   'LLB',
   'LLM',
+  // Medical / Dental / Pharma / Allied health
+  'MBBS',
+  'MD',
+  'MS (Medical)',
+  'BDS',
+  'MDS',
+  'BAMS',
+  'BHMS',
+  'B.Pharma',
+  'M.Pharma',
+  'BPT',
+  // Research
   'PhD',
+  // Anything not listed — the signup form shows a free-text box for this.
   'Other',
 ] as const;
 export type CourseProgram = (typeof COURSE_PROGRAMS)[number];
@@ -44,6 +75,11 @@ export function coursesForCategory(category?: string | null): readonly CoursePro
         'M.E.',
         'B.Arch',
         'M.Arch',
+        'B.Planning',
+        'B.Des',
+        'M.Des',
+        'Integrated M.Tech',
+        'Diploma (Engineering)',
         'BCA',
         'MCA',
         'B.Sc',
@@ -52,17 +88,43 @@ export function coursesForCategory(category?: string | null): readonly CoursePro
         'Other',
       ];
     case 'management':
-      return ['BBA', 'MBA', 'B.Com', 'M.Com', 'PhD', 'Other'];
+      return ['BBA', 'MBA', 'PGDM', 'BMS', 'B.Com', 'M.Com', 'BBA LLB', 'PhD', 'Other'];
     case 'law':
-      return ['LLB', 'LLM', 'B.A.', 'PhD', 'Other'];
+      return ['B.A. LLB', 'BBA LLB', 'B.Com LLB', 'LLB', 'LLM', 'B.A.', 'PhD', 'Other'];
     case 'science':
-      return ['B.Sc', 'M.Sc', 'BCA', 'MCA', 'B.A.', 'PhD', 'Other'];
+      return [
+        'B.Sc',
+        'M.Sc',
+        'BS-MS (Integrated)',
+        'B.Sc (Agriculture)',
+        'B.Sc (Nursing)',
+        'BCA',
+        'MCA',
+        'B.A.',
+        'PhD',
+        'Other',
+      ];
     case 'commerce':
-      return ['B.Com', 'M.Com', 'BBA', 'MBA', 'PhD', 'Other'];
+      return ['B.Com', 'M.Com', 'BBA', 'MBA', 'PGDM', 'BMS', 'B.A.', 'PhD', 'Other'];
     case 'arts':
-      return ['B.A.', 'M.A.', 'B.Com', 'BBA', 'PhD', 'Other'];
+      return ['B.A.', 'M.A.', 'BFA', 'B.Ed', 'B.Lib', 'B.Voc', 'B.Com', 'BBA', 'PhD', 'Other'];
     case 'medical':
-      return ['MBBS', 'MD', 'BDS', 'B.Pharma', 'M.Pharma', 'B.Sc', 'PhD', 'Other'];
+      return [
+        'MBBS',
+        'MD',
+        'MS (Medical)',
+        'BDS',
+        'MDS',
+        'BAMS',
+        'BHMS',
+        'B.Pharma',
+        'M.Pharma',
+        'BPT',
+        'B.Sc (Nursing)',
+        'B.Sc',
+        'PhD',
+        'Other',
+      ];
     default:
       return COURSE_PROGRAMS;
   }
@@ -76,18 +138,38 @@ export function semestersForCourse(courseProgram?: string | null): number {
     'B.Tech': 8,
     'B.E.': 8,
     'B.Arch': 10,
+    'B.Planning': 8,
+    'B.Des': 8,
+    'M.Des': 4,
+    'Integrated M.Tech': 10,
+    'Diploma (Engineering)': 6,
     MBBS: 9,
     BDS: 8,
-    LLB: 10,
+    BAMS: 10,
+    BHMS: 10,
+    BPT: 9,
+    'B.A. LLB': 10,
+    'BBA LLB': 10,
+    'B.Com LLB': 10,
+    LLB: 6,
     'B.Sc': 6,
+    'BS-MS (Integrated)': 10,
+    'B.Sc (Agriculture)': 8,
+    'B.Sc (Nursing)': 8,
     'B.A.': 6,
     'B.Com': 6,
     BBA: 6,
     BCA: 6,
+    BMS: 6,
+    BFA: 8,
+    'B.Ed': 4,
+    'B.Voc': 6,
+    'B.Lib': 2,
     'B.Pharma': 8,
     'M.Tech': 4,
     'M.E.': 4,
     MBA: 4,
+    PGDM: 4,
     MCA: 4,
     'M.Sc': 4,
     'M.A.': 4,
@@ -96,6 +178,8 @@ export function semestersForCourse(courseProgram?: string | null): number {
     'M.Pharma': 4,
     LLM: 4,
     MD: 6,
+    'MS (Medical)': 6,
+    MDS: 6,
     PhD: 6,
     Other: 8,
   };
@@ -117,7 +201,15 @@ export const SignupSchema = z.object({
   instituteEmail: z.string().email(),
   // Resolved from the picker. Server validates it exists.
   institutionId: z.string().min(1),
-  courseProgram: z.enum(COURSE_PROGRAMS),
+  // Usually one of COURSE_PROGRAMS, but students can pick "Other" and type a
+  // custom course, so this is free text. We reject the bare "Other" placeholder
+  // — the form must send the actual typed course.
+  courseProgram: z
+    .string()
+    .trim()
+    .min(2, 'Please select or type your course')
+    .max(100)
+    .refine((v) => v.toLowerCase() !== 'other', 'Please type your specific course'),
   // S3 key returned by /auth/upload-college-id. Required — no signup without
   // an ID upload.
   collegeIdFileKey: z.string().min(1),
