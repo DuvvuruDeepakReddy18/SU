@@ -13,6 +13,7 @@ import { SceneFlow } from '@/components/landing/scene-flow';
 import { SceneRecruiter } from '@/components/landing/scene-recruiter';
 import { SceneAudience } from '@/components/landing/scene-audience';
 import { SceneFinal } from '@/components/landing/scene-final';
+import { LandingNavActions, LandingDomainSelector } from '@/components/landing/landing-auth';
 
 /**
  * Landing page — cream / liquid-glass theme.
@@ -54,17 +55,13 @@ export default function LandingPage() {
                 For institutions
               </Button>
             </a>
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="sm">Get started</Button>
-            </Link>
+            <LandingNavActions />
           </nav>
         </div>
       </header>
+
+      {/* Logged-in domain selector — jump straight into any domain */}
+      <LandingDomainSelector />
 
       {/* ============ SCENE 1 — HERO ============ */}
       <section className="relative min-h-[100vh] flex items-center overflow-hidden">
