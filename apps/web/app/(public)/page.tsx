@@ -143,8 +143,9 @@ export default function LandingPage() {
             </motion.div>
           </div>
 
-          {/* Interactive device mockup — tilts to cursor, floats, live cards */}
-          <div className="hidden lg:block">
+          {/* Interactive device mockup — tilts to cursor, floats, live cards.
+              Shown on mobile too (scaled), since it's the device-first vibe. */}
+          <div className="scale-90 sm:scale-100">
             <DeviceShowcase />
           </div>
         </div>
