@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { Gavel, CheckCircle2, XCircle, Wallet } from 'lucide-react';
+import { Gavel, CheckCircle2, XCircle, Wallet, CalendarPlus } from 'lucide-react';
 
 type ReviewItem = {
   id: string;
@@ -46,6 +46,18 @@ export default function AdminInterviewsPage() {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const [gen, setGen] = useState({ days: 7, capacity: 5 });
+  const generate = useMutation({
+    mutationFn: () =>
+      api<{ created: number; domains: number }>('/interviews/slots/generate', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ days: gen.days, capacity: gen.capacity, panelSize: 2 }),
+      }),
+    onSuccess: (r) => toast.success(`Generated ${r.created} slots across ${r.domains} domains.`),
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const [period, setPeriod] = useState({ start: '', end: '' });
   const payouts = useMutation({
     mutationFn: () =>
@@ -75,6 +87,45 @@ export default function AdminInterviewsPage() {
           Releasing a pass is what awards the student L4 (Expert-Verified).
         </p>
       </div>
+
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <CalendarPlus className="h-4 w-4" /> Generate booking slots
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Creates daily slots per domain (2-expert panels) so students can book. Idempotent —
+            re-running won&apos;t duplicate existing slots.
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <div className="mb-1 text-xs text-muted-foreground">Days ahead</div>
+              <Input
+                type="number"
+                min={1}
+                max={30}
+                value={gen.days}
+                onChange={(e) => setGen({ ...gen, days: Number(e.target.value) || 7 })}
+                className="w-24"
+              />
+            </div>
+            <div>
+              <div className="mb-1 text-xs text-muted-foreground">Seats / slot</div>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={gen.capacity}
+                onChange={(e) => setGen({ ...gen, capacity: Number(e.target.value) || 5 })}
+                className="w-24"
+              />
+            </div>
+            <Button disabled={generate.isPending} onClick={() => generate.mutate()}>
+              {generate.isPending ? 'Generating…' : 'Generate slots'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="space-y-2">
         {queue?.map((it) => (
