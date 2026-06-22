@@ -72,7 +72,7 @@ export function SceneFlow() {
             </h2>
             <p className="mt-5 text-sm text-muted-foreground">
               Practice in the browser, upload your marksheet, connect GitHub. Each artifact gets
-              scanned, fingerprinted, and stamped — or sent to a human reviewer.
+              scanned, fingerprinted, and stamped, or sent to a human reviewer.
             </p>
           </motion.div>
 

@@ -4,7 +4,7 @@ import { ArrowLeft, Phone, Mail, MessageSquare, LifeBuoy } from 'lucide-react';
 
 export const metadata = { title: 'SkillVerify · Support' };
 
-// Helpline placeholders — fill these in once a dedicated number is provisioned
+// Helpline placeholders, fill these in once a dedicated number is provisioned
 // and the support inbox is set up. Leaving them blank renders the "Coming soon"
 // labels below instead of broken tel: / mailto: links.
 const SUPPORT_PHONE: string | null = null;
@@ -45,7 +45,7 @@ export default function SupportPage() {
               </a>
             ) : (
               <span className="text-muted-foreground italic">
-                Coming soon — a dedicated support number will be published here once we go live.
+                Coming soon, a dedicated support number will be published here once we go live.
               </span>
             )}
           </CardContent>
@@ -64,7 +64,7 @@ export default function SupportPage() {
               </a>
             ) : (
               <span className="text-muted-foreground italic">
-                Coming soon — until then, message the founder directly via the link below.
+                Coming soon, until then, message the founder directly via the link below.
               </span>
             )}
           </CardContent>

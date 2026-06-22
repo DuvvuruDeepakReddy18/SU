@@ -311,7 +311,7 @@ export default function FreelancePage() {
               </select>
               <textarea
                 className="md:col-span-2 flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                placeholder="What will you deliver? Be specific — turnaround, revisions, deliverables…"
+                placeholder="What will you deliver? Be specific, turnaround, revisions, deliverables…"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
@@ -424,7 +424,7 @@ function ServiceCard({ service }: { service: Service }) {
   return (
     <Link href={`/dashboard/freelance/${service.id}`} className="block group">
       <Card className="h-full overflow-hidden transition group-hover:border-primary/40 group-hover:shadow-lg">
-        {/* Colored gradient banner — picked per category */}
+        {/* Colored gradient banner, picked per category */}
         <div
           className={cn(
             'h-28 relative bg-gradient-to-br flex items-end justify-between p-3',
@@ -513,7 +513,7 @@ function ServiceCard({ service }: { service: Service }) {
 }
 
 /**
- * The "Find Work" tab is the inverse of Hire Talent — instead of services
+ * The "Find Work" tab is the inverse of Hire Talent, instead of services
  * offered, it surfaces opportunities the user can apply to. Until we have a
  * dedicated client-posts-a-brief model, link to the placements + inquiries
  * pages which already cover this slice of the marketplace.

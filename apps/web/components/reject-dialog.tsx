@@ -46,7 +46,7 @@ export function RejectDialog({
           <h2 className="font-semibold">{title}</h2>
         </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Pick the closest reason — it becomes part of the audit trail and the email the student
+          Pick the closest reason, it becomes part of the audit trail and the email the student
           receives.
         </p>
 

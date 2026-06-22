@@ -91,7 +91,7 @@ export function ProblemLeaderboard({ slug }: { slug: string }) {
       <CardContent className="p-0">
         {(data?.items.length ?? 0) === 0 ? (
           <div className="px-4 py-6 text-xs text-muted-foreground text-center">
-            No accepted solutions yet — be first.
+            No accepted solutions yet, be first.
           </div>
         ) : (
           <ul className="divide-y">

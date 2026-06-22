@@ -66,7 +66,7 @@ const STEPS: Step[] = [
   {
     key: 'integrations',
     title: 'Connect one integration',
-    body: 'GitHub, LeetCode, or LinkedIn — proves your work and unlocks L2/L3.',
+    body: 'GitHub, LeetCode, or LinkedIn, proves your work and unlocks L2/L3.',
     href: '/dashboard/integrations',
     cta: 'Connect',
     icon: Plug,
@@ -78,7 +78,7 @@ const STEPS: Step[] = [
  * Top-of-dashboard ramp shown until the student finishes all 4 steps OR
  * dismisses it. `onboardingStep` reaches 4 once dismissed/completed and the
  * wizard never renders again. The actual step *progress* bar is derived from
- * real profile data — finishing a step elsewhere (e.g. via the profile edit
+ * real profile data, finishing a step elsewhere (e.g. via the profile edit
  * page) reflects here on next mount.
  */
 export function OnboardingWizard() {

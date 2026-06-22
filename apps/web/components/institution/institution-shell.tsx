@@ -152,7 +152,7 @@ function StatusGate({ me }: { me: Me }) {
           ) : (
             <>
               Thanks for requesting access for <strong>{me.institution.name}</strong>. We verify
-              every institution account before unlocking student data — usually within a business
+              every institution account before unlocking student data, usually within a business
               day. We&apos;ll email you the moment you&apos;re approved.
             </>
           )}

@@ -65,7 +65,7 @@ export default function MyInterviewsPage() {
       }),
     onSuccess: () => {
       toast.success(
-        form.verdict === 'pass' ? 'Passed — student promoted to L4' : 'Feedback recorded',
+        form.verdict === 'pass' ? 'Passed, student promoted to L4' : 'Feedback recorded',
       );
       setScoring(null);
       setForm({ verdict: 'pass', score: '', notes: '' });

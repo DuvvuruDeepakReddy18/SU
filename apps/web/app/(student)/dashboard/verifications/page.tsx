@@ -76,7 +76,7 @@ export default function VerificationsPage() {
   });
 
   // Semester grid: start from the course default, never show fewer than the
-  // student has already uploaded, and let them add more — program length varies
+  // student has already uploaded, and let them add more, program length varies
   // by institution, so the default is a starting point, not a hard limit.
   const [extraSemesters, setExtraSemesters] = useState(0);
   const baseSemesters = semestersForCourse(profile?.courseProgram);
@@ -89,7 +89,7 @@ export default function VerificationsPage() {
       return { label: 'Verified', variant: 'success' as const };
     }
     if (profile?.collegeIdStatus === 'rejected') {
-      return { label: 'Rejected — re-upload', variant: 'warning' as const };
+      return { label: 'Rejected, re-upload', variant: 'warning' as const };
     }
     if (profile?.collegeIdUrl) {
       return { label: 'Pending review', variant: 'warning' as const };

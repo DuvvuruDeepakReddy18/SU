@@ -203,7 +203,7 @@ function SnapshotTable({ rows }: { rows: Row[] }) {
   if (rows.length === 0) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
-        No rankings yet — solve a problem to appear.
+        No rankings yet, solve a problem to appear.
       </div>
     );
   }

@@ -55,7 +55,7 @@ export default function CompanyHomePage() {
         <CardContent className="p-5 text-sm text-muted-foreground">
           <div className="font-medium text-foreground mb-1">How hiring works here</div>
           Every candidate you see is a real, public student profile. Skills carry a verification
-          layer (L1–L4) backed by evidence. You can shortlist freely; to reach out, send a message —
+          layer (L1–L4) backed by evidence. You can shortlist freely; to reach out, send a message,
           the student&apos;s contact details stay private until they accept.
         </CardContent>
       </Card>

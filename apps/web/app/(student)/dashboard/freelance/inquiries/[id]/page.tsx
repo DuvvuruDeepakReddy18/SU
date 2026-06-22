@@ -206,7 +206,7 @@ export default function InquiryDetailPage({ params }: { params: { id: string } }
         <CardContent className="space-y-3">
           {data.messages.length === 0 && (
             <p className="text-xs text-muted-foreground italic">
-              No messages yet — start the conversation below.
+              No messages yet, start the conversation below.
             </p>
           )}
           {data.messages.map((m) => {

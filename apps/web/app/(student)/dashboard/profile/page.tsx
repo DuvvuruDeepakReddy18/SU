@@ -71,7 +71,7 @@ export default function ProfilePage() {
     if (profile) setForm(profile);
   }, [profile]);
 
-  // Feature flags — used to hide the file-upload UI when the API has no S3 config.
+  // Feature flags, used to hide the file-upload UI when the API has no S3 config.
   const { data: features } = useQuery({
     queryKey: ['config'],
     queryFn: () =>
@@ -188,7 +188,7 @@ export default function ProfilePage() {
         <CardContent className="py-8 space-y-3">
           <p className="font-medium">Your session is missing an access token.</p>
           <p className="text-sm text-muted-foreground">
-            Sign out and sign back in to refresh — this usually happens after auth-related code
+            Sign out and sign back in to refresh, this usually happens after auth-related code
             changes.
           </p>
           <Button onClick={() => (window.location.href = '/api/auth/signout')}>Sign out</Button>
@@ -218,7 +218,7 @@ export default function ProfilePage() {
   }
   if (!profile || profileLoading) return <ProfileSkeleton />;
 
-  // --- Onboarding hero — no resume yet ---
+  // --- Onboarding hero, no resume yet ---
   if (!hasResume && !editing && !justParsed) {
     return (
       <div className="space-y-4">
@@ -379,7 +379,7 @@ export default function ProfilePage() {
     );
   }
 
-  // --- Review mode (resume uploaded — read-only summary + PDF preview) ---
+  // --- Review mode (resume uploaded, read-only summary + PDF preview) ---
   return (
     <div className="space-y-4">
       <ProfileTabs />
@@ -590,7 +590,7 @@ function UploadHero({
           <div className="mt-6 mx-auto max-w-xl space-y-3">
             <textarea
               className="flex min-h-[200px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-              placeholder="Paste your resume here — name, education, skills, projects, experience…"
+              placeholder="Paste your resume here, name, education, skills, projects, experience…"
               value={text}
               onChange={(e) => setText(e.target.value)}
               disabled={parsing}

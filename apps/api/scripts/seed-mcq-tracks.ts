@@ -103,7 +103,7 @@ const QUESTIONS: Mcq[] = [
     options: ['Targeting', 'Positioning', 'Segmentation', 'Branding'],
     correctOption: 2,
     explanation:
-      'This is Segmentation — the first step of STP. Targeting is choosing which segments to serve; Positioning is crafting how the brand is perceived in the chosen segment.',
+      'This is Segmentation, the first step of STP. Targeting is choosing which segments to serve; Positioning is crafting how the brand is perceived in the chosen segment.',
   },
   {
     slug: 'mcq-mgmt-leadership',
@@ -339,7 +339,7 @@ const QUESTIONS: Mcq[] = [
     ],
     correctOption: 1,
     explanation:
-      'Continuing practice in heavy rain "without a single complaint" shows commitment and discipline — i.e. the team was dedicated.',
+      'Continuing practice in heavy rain "without a single complaint" shows commitment and discipline, i.e. the team was dedicated.',
   },
 
   // ---------------- General Knowledge ----------------

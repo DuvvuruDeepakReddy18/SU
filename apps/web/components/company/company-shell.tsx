@@ -152,8 +152,8 @@ function StatusGate({ me }: { me: RecruiterMe }) {
           ) : (
             <>
               Thanks for signing up <strong>{me.employer.name}</strong>. We verify every company
-              before granting access to verified students — usually within a business day.
-              We&apos;ll email you the moment you&apos;re approved.
+              before granting access to verified students, usually within a business day. We&apos;ll
+              email you the moment you&apos;re approved.
             </>
           )}
         </p>

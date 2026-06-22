@@ -229,7 +229,7 @@ export default function InterviewsPage() {
                 {eligibleSkills && eligibleSkills.length === 0 ? (
                   <p className="rounded border border-dashed p-3 text-xs text-muted-foreground">
                     No eligible skills yet. An expert interview verifies a skill from L3 (Proven) to
-                    L4 (Expert) — prove a skill to L3 first (projects + verified certs), then come
+                    L4 (Expert), prove a skill to L3 first (projects + verified certs), then come
                     back to book.
                   </p>
                 ) : (
@@ -358,7 +358,7 @@ export default function InterviewsPage() {
                   <Input
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Focus areas (e.g. system design + Python) — optional"
+                    placeholder="Focus areas (e.g. system design + Python), optional"
                   />
                   {!selectedSkillId && (
                     <p className="text-[11px] text-amber-600">Pick a skill to verify above.</p>

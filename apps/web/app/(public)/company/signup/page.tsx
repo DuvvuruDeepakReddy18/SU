@@ -83,7 +83,7 @@ export default function CompanySignupPage() {
           </div>
           <CardTitle>Hire verified talent</CardTitle>
           <CardDescription>
-            Create a recruiter account. We verify every company before you can search students —
+            Create a recruiter account. We verify every company before you can search students,
             usually within a business day.
           </CardDescription>
         </CardHeader>

@@ -31,7 +31,7 @@ export default function InstitutionHomePage() {
         <h1 className="text-2xl font-semibold">Welcome</h1>
         <p className="text-sm text-muted-foreground">
           Oversee your students&apos; verified profiles, post campus drives, and track placement
-          analytics. Verification stays with SkillVerify — your stats stay credible.
+          analytics. Verification stays with SkillVerify, your stats stay credible.
         </p>
       </div>
 
@@ -53,7 +53,7 @@ export default function InstitutionHomePage() {
           href="/institution/analytics"
           icon={BarChart3}
           title="Analytics"
-          body="Layer distribution, verified %, placements — export-ready."
+          body="Layer distribution, verified %, placements, export-ready."
         />
         <QuickCard
           href="/institution/drives"
@@ -68,7 +68,7 @@ export default function InstitutionHomePage() {
           <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-600" />
           <div>
             <span className="font-medium text-foreground">Read-only verification.</span> You can see
-            each student&apos;s verification status, but only SkillVerify approves it — so the
+            each student&apos;s verification status, but only SkillVerify approves it, so the
             placement numbers you export carry weight with recruiters.
           </div>
         </CardContent>

@@ -26,8 +26,8 @@ type Job = {
 };
 
 const MIN_LEVELS = [
-  { value: 'L3_PROVEN', label: 'L3 — Proven (minimum)' },
-  { value: 'L4_EXPERT', label: 'L4 — Expert' },
+  { value: 'L3_PROVEN', label: 'L3, Proven (minimum)' },
+  { value: 'L4_EXPERT', label: 'L4, Expert' },
 ];
 const JOB_TYPES = ['full_time', 'internship', 'contract', 'ppo'];
 

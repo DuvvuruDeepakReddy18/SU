@@ -57,7 +57,7 @@ export default function InternshipsPage() {
         <div className="flex items-start gap-2 rounded-lg border bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
           Applying requires at least L3 (Proven). Earn it by shipping projects or solving practice
-          problems — your verified layer is what makes recruiters take the application seriously.
+          problems, your verified layer is what makes recruiters take the application seriously.
         </div>
 
         {isLoading ? (

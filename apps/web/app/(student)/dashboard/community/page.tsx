@@ -190,7 +190,7 @@ export default function CommunityPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['community.posts'] }),
   });
 
-  // Quick stats summarized from the loaded feed — purely cosmetic in the hero.
+  // Quick stats summarized from the loaded feed, purely cosmetic in the hero.
   const totalPosts = data?.total ?? 0;
   const visibleSubs = allSubreddits.length;
 
@@ -219,7 +219,7 @@ export default function CommunityPage() {
             </h1>
             <p className="mt-2 text-sm text-muted-foreground max-w-xl">
               The web of student communities. Discuss freely, share anonymously, message your peers
-              — across institutes and within yours.
+              , across institutes and within yours.
             </p>
             <div className="mt-3 flex flex-wrap gap-4 justify-center md:justify-start text-xs">
               <Stat n={totalPosts} label="posts in your feed" />
@@ -279,7 +279,7 @@ export default function CommunityPage() {
                 {activeSub ? `r/${activeSub}` : 'Community'}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Discuss, share, ask — across institutes and within yours.
+                Discuss, share, ask, across institutes and within yours.
               </p>
             </div>
             <div className="inline-flex rounded-md border bg-secondary/30 p-1 text-sm">
@@ -375,7 +375,7 @@ export default function CommunityPage() {
             {data?.items.length === 0 && (
               <Card>
                 <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                  No posts yet — be the first.
+                  No posts yet, be the first.
                 </CardContent>
               </Card>
             )}
@@ -405,7 +405,7 @@ function Stat({ n, label }: { n: number; label: string }) {
   );
 }
 
-// Mirrors the backend math in CommunityService.vote — keeps the optimistic
+// Mirrors the backend math in CommunityService.vote, keeps the optimistic
 // update consistent with what the server returns.
 function computeVoteDelta(
   current: 0 | 1 | -1,
@@ -663,7 +663,7 @@ function CommentThread({ postId, token }: { postId: string; token?: string }) {
 
       {/* Tree */}
       {tree.length === 0 && (
-        <p className="text-xs text-muted-foreground italic">No comments yet — start the thread.</p>
+        <p className="text-xs text-muted-foreground italic">No comments yet, start the thread.</p>
       )}
       <div className="space-y-3">
         {tree.map((c) => (

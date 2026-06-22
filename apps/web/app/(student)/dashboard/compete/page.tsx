@@ -170,7 +170,7 @@ export default function CompetePage() {
             <Card className="md:col-span-2">
               <CardContent className="p-12 text-center text-sm text-muted-foreground">
                 <Trophy className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                No competitions yet — be the first to host one.
+                No competitions yet, be the first to host one.
               </CardContent>
             </Card>
           )}

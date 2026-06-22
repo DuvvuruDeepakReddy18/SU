@@ -38,7 +38,7 @@ const QUESTIONS: Mcq[] = [
     ],
     correctOption: 1,
     explanation:
-      'A display of goods with a price is an invitation to treat — an invitation for customers to make an offer — not an offer itself. The customer makes the offer by proposing to buy; the shopkeeper may accept or reject it (Pharmaceutical Society v Boots).',
+      'A display of goods with a price is an invitation to treat, an invitation for customers to make an offer, not an offer itself. The customer makes the offer by proposing to buy; the shopkeeper may accept or reject it (Pharmaceutical Society v Boots).',
   },
   {
     slug: 'cs-law-consideration',
@@ -56,7 +56,7 @@ const QUESTIONS: Mcq[] = [
     ],
     correctOption: 1,
     explanation:
-      'An agreement without consideration is void (s.25). The "natural love and affection" exception requires the promise to be in writing AND registered AND between parties in a near relation — not satisfied here, so it is unenforceable.',
+      'An agreement without consideration is void (s.25). The "natural love and affection" exception requires the promise to be in writing AND registered AND between parties in a near relation, not satisfied here, so it is unenforceable.',
   },
   {
     slug: 'cs-law-article-21',
@@ -74,7 +74,7 @@ const QUESTIONS: Mcq[] = [
     ],
     correctOption: 1,
     explanation:
-      'Article 21 protects life and personal liberty. Post Maneka Gandhi, any "procedure established by law" depriving liberty must be just, fair and reasonable — not arbitrary — so a procedure denying grounds and representation fails.',
+      'Article 21 protects life and personal liberty. Post Maneka Gandhi, any "procedure established by law" depriving liberty must be just, fair and reasonable, not arbitrary, so a procedure denying grounds and representation fails.',
   },
   {
     slug: 'cs-law-copyright-vs-patent',
@@ -104,7 +104,7 @@ const QUESTIONS: Mcq[] = [
       "A takes B's umbrella from a stand, genuinely and reasonably believing it is her own. B alleges theft. What is the most accurate analysis?",
     options: [
       'Theft is made out because A took the umbrella.',
-      'No theft — theft requires a dishonest intention (mens rea), which is absent on an honest mistaken belief of ownership.',
+      'No theft, theft requires a dishonest intention (mens rea), which is absent on an honest mistaken belief of ownership.',
       'Theft is strict liability and intention is irrelevant.',
       'It is robbery, not theft.',
     ],
@@ -140,7 +140,7 @@ const QUESTIONS: Mcq[] = [
       'A manufacturer sells a sealed drink containing a contaminant. The end consumer, who did not buy it directly, falls ill. There is no contract between the consumer and the manufacturer. Can the consumer recover in tort?',
     options: [
       'No, because there is no contract (privity) with the manufacturer.',
-      'Yes — a manufacturer owes a duty of care to the ultimate consumer (Donoghue v Stevenson).',
+      'Yes, a manufacturer owes a duty of care to the ultimate consumer (Donoghue v Stevenson).',
       'No, only the retailer can ever be liable.',
       'Yes, but only for a refund of the price.',
     ],
@@ -158,7 +158,7 @@ const QUESTIONS: Mcq[] = [
       'X buys 50 industrial sewing machines to run a large commercial garment factory for profit (not self-employment). A machine is defective. Can X complain as a "consumer" under the Consumer Protection Act?',
     options: [
       'Yes, every buyer is a consumer.',
-      'No — goods bought for a commercial/resale purpose are excluded, unless bought for self-employment to earn a livelihood.',
+      'No, goods bought for a commercial/resale purpose are excluded, unless bought for self-employment to earn a livelihood.',
       'Yes, because the machines are defective.',
       'No, only services are covered by the Act.',
     ],
@@ -202,7 +202,7 @@ const QUESTIONS: Mcq[] = [
     ],
     correctOption: 1,
     explanation:
-      'Straight-line = (cost − salvage) / life = 1,00,000 / 5 = ₹20,000 per year (constant). WDV applies a fixed % to a declining book value, so it front-loads depreciation — charging more in the early years (year 1) than straight-line.',
+      'Straight-line = (cost − salvage) / life = 1,00,000 / 5 = ₹20,000 per year (constant). WDV applies a fixed % to a declining book value, so it front-loads depreciation, charging more in the early years (year 1) than straight-line.',
   },
   {
     slug: 'cs-com-input-tax-credit',
@@ -231,14 +231,14 @@ const QUESTIONS: Mcq[] = [
     description:
       'A firm has current assets of ₹6,00,000 and current liabilities of ₹3,00,000. What is its current ratio, and what does it indicate?',
     options: [
-      '0.5 : 1 — poor liquidity.',
-      '2 : 1 — generally healthy short-term liquidity.',
-      '3 : 1 — the firm is insolvent.',
+      '0.5 : 1, poor liquidity.',
+      '2 : 1, generally healthy short-term liquidity.',
+      '3 : 1, the firm is insolvent.',
       'It cannot be computed without net profit.',
     ],
     correctOption: 1,
     explanation:
-      'Current ratio = current assets / current liabilities = 6,00,000 / 3,00,000 = 2 : 1. A ratio around 2:1 is conventionally considered comfortable short-term liquidity — enough current assets to cover current liabilities.',
+      'Current ratio = current assets / current liabilities = 6,00,000 / 3,00,000 = 2 : 1. A ratio around 2:1 is conventionally considered comfortable short-term liquidity, enough current assets to cover current liabilities.',
   },
   {
     slug: 'cs-com-fixed-variable',
@@ -256,7 +256,7 @@ const QUESTIONS: Mcq[] = [
     ],
     correctOption: 1,
     explanation:
-      'Rent is a fixed cost — total stays ₹50,000 (though per-unit fixed cost falls as output rises). Raw material is a variable cost — total varies with output: 1,000×₹20 = ₹20,000 rises to 2,000×₹20 = ₹40,000.',
+      'Rent is a fixed cost, total stays ₹50,000 (though per-unit fixed cost falls as output rises). Raw material is a variable cost, total varies with output: 1,000×₹20 = ₹20,000 rises to 2,000×₹20 = ₹40,000.',
   },
   {
     slug: 'cs-com-time-value',

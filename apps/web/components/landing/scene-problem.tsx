@@ -57,7 +57,7 @@ export function SceneProblem() {
         className="mt-6 max-w-xl text-center text-muted-foreground text-base md:text-lg"
       >
         Recruiters wade through self-rated stars and fake CGPAs. SkillVerify replaces them with four
-        layers of evidence — every claim backed by a document, a run, or a human.
+        layers of evidence, every claim backed by a document, a run, or a human.
       </motion.p>
 
       {/* Fake-claim cards that disintegrate on scroll-out */}

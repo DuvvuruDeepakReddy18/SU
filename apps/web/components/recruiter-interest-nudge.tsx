@@ -36,7 +36,7 @@ export function RecruiterInterestNudge() {
         <span className="font-medium">
           {data.count} {data.count === 1 ? 'company is' : 'companies are'} interested in you
         </span>
-        <span className="text-muted-foreground"> — review and share your contact.</span>
+        <span className="text-muted-foreground">, review and share your contact.</span>
       </div>
       <ArrowRight className="h-4 w-4 text-emerald-700" />
     </Link>

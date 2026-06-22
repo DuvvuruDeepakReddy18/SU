@@ -43,7 +43,7 @@ export default function PoolPage() {
         <h1 className="text-2xl font-semibold">Open interview pool</h1>
         <p className="text-sm text-muted-foreground">
           Claim an L4 expert interview to conduct it. Passing promotes the student&apos;s skill to
-          L4 — the top verification layer.
+          L4, the top verification layer.
         </p>
       </div>
 

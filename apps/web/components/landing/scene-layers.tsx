@@ -17,7 +17,7 @@ const LAYERS = [
     code: 'L2',
     name: 'Certified',
     color: '#34d399',
-    body: 'Courses from accredited issuers. Tier-mapped — only the certificates recruiters actually trust.',
+    body: 'Courses from accredited issuers. Tier-mapped, only the certificates recruiters actually trust.',
   },
   {
     code: 'L3',
@@ -46,7 +46,7 @@ function Plate({
   scrollRef: React.MutableRefObject<number>;
 }) {
   const ref = useRef<Group>(null);
-  // Arrival window — staggered so plates assemble in order, all in place by ~0.7.
+  // Arrival window, staggered so plates assemble in order, all in place by ~0.7.
   const inStart = (index / total) * 0.5 + 0.05;
   const inEnd = inStart + 0.18;
 

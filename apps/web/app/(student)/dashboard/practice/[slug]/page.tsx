@@ -321,7 +321,7 @@ export default function ProblemPage({ params }: { params: { slug: string } }) {
             </div>
           </div>
 
-          {/* Performance reminder — nudges optimal complexity over brute force. */}
+          {/* Performance reminder, nudges optimal complexity over brute force. */}
           <div className="rounded-md border border-amber-300/50 bg-amber-50 p-3 text-xs dark:border-amber-800/40 dark:bg-amber-950/20">
             <strong className="font-semibold">Mind your complexity.</strong> Submissions run against
             hidden tests with a 2-second limit. Aim for the optimal time and space complexity; a
@@ -465,7 +465,7 @@ function EditorPane({
   } else {
     terminalLines.push({
       type: 'info',
-      text: 'Hit "Run & submit" — output, errors, and test diffs will land here.',
+      text: 'Hit "Run & submit", output, errors, and test diffs will land here.',
     });
   }
 
@@ -617,7 +617,7 @@ function SubmissionResult({ sub }: { sub: Submission }) {
           <div className="rounded border border-amber-300/40 bg-amber-50/40 p-3 text-xs dark:bg-amber-900/10">
             <p className="font-medium">Code execution sandbox not running</p>
             <p className="mt-1 text-muted-foreground">
-              Judge0 is down — start it with{' '}
+              Judge0 is down, start it with{' '}
               <code className="text-foreground">
                 docker compose up -d judge0-db judge0-redis judge0-api judge0-worker
               </code>

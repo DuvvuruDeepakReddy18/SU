@@ -59,7 +59,7 @@ export function SceneRecruiter() {
     <section
       ref={ref}
       className="relative min-h-[180vh]"
-      aria-label="Recruiter view — filter by verified level"
+      aria-label="Recruiter view, filter by verified level"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center">
         <div className="container mx-auto px-6 grid lg:grid-cols-[1fr_1.4fr] gap-12 items-center">
@@ -76,7 +76,7 @@ export function SceneRecruiter() {
               . Get only candidates with shipped evidence.
             </h2>
             <p className="mt-5 text-sm text-muted-foreground">
-              Skill, layer, college, intent. No résumé padding — every chip is reproducible from a
+              Skill, layer, college, intent. No résumé padding, every chip is reproducible from a
               real artefact on the candidate's profile.
             </p>
           </motion.div>

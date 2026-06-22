@@ -155,11 +155,11 @@ export default function PlacementsPage() {
                 value={form.minLevel}
                 onChange={(e) => setForm({ ...form, minLevel: e.target.value })}
               >
-                <option value="L0_UNVERIFIED">L0 — anyone</option>
-                <option value="L1_ACADEMIC">L1 — Academic</option>
-                <option value="L2_CERTIFIED">L2 — Certified</option>
-                <option value="L3_PROVEN">L3 — Proven (recommended)</option>
-                <option value="L4_EXPERT">L4 — Expert</option>
+                <option value="L0_UNVERIFIED">L0, anyone</option>
+                <option value="L1_ACADEMIC">L1, Academic</option>
+                <option value="L2_CERTIFIED">L2, Certified</option>
+                <option value="L3_PROVEN">L3, Proven (recommended)</option>
+                <option value="L4_EXPERT">L4, Expert</option>
               </select>
               <Input
                 placeholder="Skills (comma-separated)"

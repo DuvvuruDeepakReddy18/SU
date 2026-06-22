@@ -36,7 +36,7 @@ const AUDIENCES = [
     badge: 'bg-emerald-500/15 text-emerald-700 border-emerald-400/30',
     points: [
       { icon: ShieldCheck, text: 'Search verified candidates by skill, layer & college' },
-      { icon: Lock, text: 'Gated contact — you connect only after a candidate accepts' },
+      { icon: Lock, text: 'Gated contact, you connect only after a candidate accepts' },
       { icon: Sparkles, text: 'Free while we’re in beta' },
     ],
     cta: { label: 'Post a role', href: '/company/signup' },
@@ -46,7 +46,7 @@ const AUDIENCES = [
     icon: GraduationCap,
     title: 'Your placement cell, live',
     blurb:
-      'A read-only command centre for your TPO — every student’s verification and academic status, plus the tools to run placements.',
+      'A read-only command centre for your TPO, every student’s verification and academic status, plus the tools to run placements.',
     accent: 'from-amber-400/20 to-stone-400/10',
     ring: 'group-hover:ring-amber-400/40',
     badge: 'bg-amber-500/15 text-amber-700 border-amber-400/30',

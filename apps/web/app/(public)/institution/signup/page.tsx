@@ -137,7 +137,7 @@ export default function InstitutionSignupPage() {
           <div className="mt-4 flex items-start gap-2 rounded-md bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
             <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
             Using your official college email helps us verify you faster. Verification authority
-            stays with SkillVerify — TPO accounts have read-only oversight of student verification.
+            stays with SkillVerify, TPO accounts have read-only oversight of student verification.
           </div>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
