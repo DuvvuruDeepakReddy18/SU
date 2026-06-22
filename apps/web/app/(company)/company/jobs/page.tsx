@@ -181,7 +181,7 @@ export default function JobsPage() {
         </Card>
       )}
 
-      {(jobs?.length ?? 0) === 0 ? (
+      {jobs?.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           <Briefcase className="mx-auto mb-2 h-6 w-6" />
           No jobs posted yet.

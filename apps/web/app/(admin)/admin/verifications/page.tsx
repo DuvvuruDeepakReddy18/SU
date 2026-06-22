@@ -72,7 +72,7 @@ export default function VerificationsQueuePage() {
       </div>
 
       {isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
-      {!isLoading && (items?.length ?? 0) === 0 && (
+      {!isLoading && items?.length === 0 && (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
             Nothing in the queue. Nice work.

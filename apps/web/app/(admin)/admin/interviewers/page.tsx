@@ -222,7 +222,7 @@ export default function InterviewersPage() {
             </CardContent>
           </Card>
         ))}
-        {(data?.length ?? 0) === 0 && (
+        {data?.length === 0 && (
           <Card>
             <CardContent className="p-6 text-center text-sm text-muted-foreground">
               No interviewers yet. Invite one above.

@@ -49,7 +49,7 @@ export default function PoolPage() {
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
-      ) : (data?.length ?? 0) === 0 ? (
+      ) : data?.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           <Inbox className="mx-auto mb-2 h-6 w-6" />
           No interviews waiting in the pool right now.

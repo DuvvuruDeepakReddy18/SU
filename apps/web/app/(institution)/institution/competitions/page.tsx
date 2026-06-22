@@ -165,7 +165,7 @@ export default function CompetitionsPage() {
         </Card>
       )}
 
-      {(comps?.length ?? 0) === 0 ? (
+      {comps?.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           <Trophy className="mx-auto mb-2 h-6 w-6" />
           No competitions yet.

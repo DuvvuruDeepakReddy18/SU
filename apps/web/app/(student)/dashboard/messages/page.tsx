@@ -52,7 +52,7 @@ export default function MessagesInboxPage() {
         </Card>
       )}
 
-      {!isLoading && (threads?.length ?? 0) === 0 && (
+      {!isLoading && threads?.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             No conversations yet. Open someone&apos;s public profile and click&nbsp;

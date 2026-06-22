@@ -164,7 +164,7 @@ export default function AdminInterviewsPage() {
             </CardContent>
           </Card>
         ))}
-        {(queue?.length ?? 0) === 0 && (
+        {queue?.length === 0 && (
           <Card>
             <CardContent className="p-6 text-center text-sm text-muted-foreground">
               No interviews pending review.

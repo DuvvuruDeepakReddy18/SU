@@ -60,7 +60,7 @@ export default function PendingInstitutionsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">User-suggested institutions</h1>
-      {(data?.length ?? 0) === 0 && (
+      {data?.length === 0 && (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
             No pending suggestions.

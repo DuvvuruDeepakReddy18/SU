@@ -80,7 +80,7 @@ export default function PendingRecruitersPage() {
         </p>
       </div>
 
-      {(data?.length ?? 0) === 0 && (
+      {data?.length === 0 && (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
             No recruiters waiting for approval.

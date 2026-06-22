@@ -62,7 +62,7 @@ export default function InternshipsPage() {
 
         {isLoading ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
-        ) : (drives?.length ?? 0) === 0 ? (
+        ) : drives?.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center text-sm text-muted-foreground">
               <Backpack className="mx-auto mb-2 h-8 w-8 opacity-50" />
