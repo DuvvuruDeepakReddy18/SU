@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Magnetic } from '@/components/interactive';
 import { Sparkles, ArrowRight, Zap, ShieldCheck } from 'lucide-react';
 
-import { HeroOrbs } from '@/components/landing/hero-orbs';
+import { DeviceShowcase } from '@/components/landing/device-showcase';
 import { SceneProblem } from '@/components/landing/scene-problem';
 import { SceneLayers } from '@/components/landing/scene-layers';
 import { SceneFlow } from '@/components/landing/scene-flow';
@@ -143,9 +143,9 @@ export default function LandingPage() {
             </motion.div>
           </div>
 
-          {/* Liquid-glass trust orbs */}
+          {/* Interactive device mockup — tilts to cursor, floats, live cards */}
           <div className="hidden lg:block">
-            <HeroOrbs />
+            <DeviceShowcase />
           </div>
         </div>
 
