@@ -31,6 +31,20 @@ type Booking = {
 
 type EligibleSkill = { skillId: string; name: string };
 
+// Human-readable booking statuses. The panel scores into "pending review"; an
+// admin then releases as pass/fail (the ~48h audit window).
+const STATUS_LABEL: Record<string, string> = {
+  scheduled: 'Scheduled',
+  booked: 'Booked',
+  completed_pending_review: 'Pending review',
+  released_pass: 'Passed',
+  released_fail: 'Not passed',
+  passed: 'Passed',
+  failed: 'Not passed',
+  cancelled: 'Cancelled',
+  no_show: 'No-show',
+};
+
 // Time slots offered each day (08:00–20:00 hourly).
 const SLOTS = Array.from({ length: 13 }, (_, i) => i + 8); // 8..20
 
@@ -89,8 +103,11 @@ export default function InterviewsPage() {
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const upcoming = bookings?.filter((b) => b.status === 'scheduled').length ?? 0;
-  const passed = bookings?.filter((b) => b.status === 'passed').length ?? 0;
+  const upcoming =
+    bookings?.filter((b) => ['scheduled', 'booked', 'completed_pending_review'].includes(b.status))
+      .length ?? 0;
+  const passed =
+    bookings?.filter((b) => ['passed', 'released_pass'].includes(b.status)).length ?? 0;
   const total = bookings?.length ?? 0;
 
   // ---- Razorpay checkout flow ----
@@ -424,17 +441,19 @@ export default function InterviewsPage() {
                       </div>
                       <Badge
                         variant={
-                          b.status === 'passed'
+                          ['passed', 'released_pass'].includes(b.status)
                             ? 'success'
-                            : b.status === 'scheduled'
-                              ? 'default'
-                              : 'secondary'
+                            : ['failed', 'released_fail'].includes(b.status)
+                              ? 'warning'
+                              : b.status === 'completed_pending_review'
+                                ? 'secondary'
+                                : 'default'
                         }
                       >
-                        {b.status}
+                        {STATUS_LABEL[b.status] ?? b.status}
                       </Badge>
                     </div>
-                    {b.status === 'scheduled' && b.meetingUrl && (
+                    {['scheduled', 'booked'].includes(b.status) && b.meetingUrl && (
                       <Button asChild size="sm" variant="outline" className="h-8">
                         <a href={b.meetingUrl} target="_blank" rel="noreferrer">
                           <Video className="h-3.5 w-3.5" /> Join meeting{' '}

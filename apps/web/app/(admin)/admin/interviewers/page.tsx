@@ -16,6 +16,8 @@ type Interviewer = {
   bio: string | null;
   expertise: string[];
   active: boolean;
+  licenseStatus: string;
+  licenseDueAt: string | null;
   claimed: number;
   passed: number;
   user: { email: string };
@@ -67,6 +69,26 @@ export default function InterviewersPage() {
         body: JSON.stringify({ active }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin.interviewers'] }),
+  });
+
+  const setLicense = useMutation({
+    mutationFn: ({
+      userId,
+      action,
+    }: {
+      userId: string;
+      action: 'renew' | 'suspend' | 'reactivate';
+    }) =>
+      api(`/admin/interviewers/${userId}/license`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ action }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin.interviewers'] });
+      toast.success('License updated');
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   return (
@@ -162,16 +184,41 @@ export default function InterviewersPage() {
                   {iv.expertise.length > 0 && ` · ${iv.expertise.join(', ')}`}
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {iv.claimed} claimed · {iv.passed} passed
+                  {iv.claimed} claimed · {iv.passed} passed · license: {iv.licenseStatus}
+                  {iv.licenseDueAt &&
+                    ` (renews by ${new Date(iv.licenseDueAt).toLocaleDateString()})`}
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toggleActive.mutate({ userId: iv.userId, active: !iv.active })}
-              >
-                {iv.active ? 'Deactivate' : 'Reactivate'}
-              </Button>
+              <div className="flex shrink-0 flex-col gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => toggleActive.mutate({ userId: iv.userId, active: !iv.active })}
+                >
+                  {iv.active ? 'Deactivate' : 'Reactivate'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={setLicense.isPending}
+                  onClick={() => setLicense.mutate({ userId: iv.userId, action: 'renew' })}
+                >
+                  Renew license
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={setLicense.isPending}
+                  onClick={() =>
+                    setLicense.mutate({
+                      userId: iv.userId,
+                      action: iv.licenseStatus === 'suspended' ? 'reactivate' : 'suspend',
+                    })
+                  }
+                >
+                  {iv.licenseStatus === 'suspended' ? 'Unsuspend' : 'Suspend'} license
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
