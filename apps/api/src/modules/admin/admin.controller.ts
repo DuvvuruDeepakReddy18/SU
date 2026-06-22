@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -320,6 +321,38 @@ export class AdminController {
   @Post('interviewers/:userId/active')
   setInterviewerActive(@Param('userId') userId: string, @Body() body: { active: boolean }) {
     return this.interviewers.adminSetActive(userId, body.active !== false);
+  }
+
+  // ---- Interview review window / licensing / payouts (Ch.6) ----
+
+  /** Interviews awaiting the ~48h review before results go live. */
+  @Get('interviews/review-queue')
+  interviewReviewQueue() {
+    return this.interviewers.adminReviewQueue();
+  }
+
+  /** Release a reviewed interview — pass awards L4 (Expert-Verified). */
+  @Post('interviews/:id/release')
+  releaseInterview(@Param('id') id: string, @Body() body: { pass: boolean }) {
+    return this.interviewers.adminRelease(id, body?.pass === true);
+  }
+
+  /** Renew / suspend / reactivate an interviewer's license. */
+  @Post('interviewers/:userId/license')
+  setInterviewerLicense(
+    @Param('userId') userId: string,
+    @Body() body: { action: 'renew' | 'suspend' | 'reactivate' },
+  ) {
+    return this.interviewers.adminSetLicense(userId, body?.action ?? 'renew');
+  }
+
+  /** Build a fortnightly interviewer payout batch for a period. */
+  @Post('interviews/payouts/run')
+  runInterviewPayouts(@Body() body: { periodStart: string; periodEnd: string }) {
+    if (!body?.periodStart || !body?.periodEnd) {
+      throw new BadRequestException('periodStart and periodEnd are required (ISO dates).');
+    }
+    return this.interviewers.runPayouts(body.periodStart, body.periodEnd);
   }
 
   // ---- Community moderation ----

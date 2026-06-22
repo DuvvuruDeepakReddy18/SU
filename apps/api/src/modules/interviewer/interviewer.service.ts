@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
-import { VerificationLayer } from '@prisma/client';
+import { VerificationLayer, L4VerificationMethod } from '@prisma/client';
 import type { InviteInterviewerInput, ScoreInterviewInput } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { EmailService } from '../../infra/email/email.service';
@@ -69,7 +69,7 @@ export class InterviewerService {
         const [claimed, passed] = await Promise.all([
           this.prisma.interviewBooking.count({ where: { interviewerId: r.userId } }),
           this.prisma.interviewBooking.count({
-            where: { interviewerId: r.userId, status: 'passed' },
+            where: { interviewerId: r.userId, status: { in: ['passed', 'released_pass'] } },
           }),
         ]);
         return { ...r, claimed, passed };
@@ -163,42 +163,102 @@ export class InterviewerService {
   async score(userId: string, bookingId: string, input: ScoreInterviewInput) {
     await this.requireActive(userId);
     const booking = await this.prisma.interviewBooking.findUnique({ where: { id: bookingId } });
-    if (!booking || booking.interviewerId !== userId) {
+    // Either panelist may submit the panel's verdict.
+    if (!booking || (booking.interviewerId !== userId && booking.panelist2Id !== userId)) {
       throw new NotFoundException('Interview not found in your queue.');
     }
-    if (booking.status === 'passed' || booking.status === 'failed') {
+    if (
+      ['completed_pending_review', 'released_pass', 'released_fail', 'passed', 'failed'].includes(
+        booking.status,
+      )
+    ) {
       throw new BadRequestException('This interview has already been scored.');
     }
 
     const pass = input.verdict === 'pass';
+    // Record the panel's verdict but HOLD it for the ~48h review window — L4 is
+    // only awarded after an admin reviews the recording/transcript. Decoupling
+    // the in-room verdict from release is the core anti-collusion control (Ch.6).
     const updated = await this.prisma.interviewBooking.update({
       where: { id: bookingId },
       data: {
-        status: pass ? 'passed' : 'failed',
-        result: pass ? 'L4_VERIFIED' : 'FEEDBACK_ONLY',
+        status: 'completed_pending_review',
+        result: pass ? 'L4_VERIFIED' : 'FEEDBACK_ONLY', // provisional recommendation
         score: input.score ?? null,
         panelNotes: input.notes ?? null,
       },
     });
 
-    if (pass && booking.skillId) {
-      await this.awardL4(booking.userId, booking.skillId);
-    }
+    const skillName = await this.skillName(booking.skillId);
+    void this.notifications.emit(booking.userId, 'interview_completed', {
+      title: 'Interview complete',
+      body: `Your ${skillName} interview is done. Results are released after a short review, usually within ~48 hours.`,
+      href: '/dashboard/interviews',
+    });
+    return updated;
+  }
 
-    const skill = booking.skillId
-      ? await this.prisma.skillCatalog.findUnique({
-          where: { id: booking.skillId },
-          select: { name: true },
+  // ---------- Admin: review window, licensing, payouts (Ch.6) ----------
+
+  /** Interviews awaiting the ~48h review before results are released. */
+  async adminReviewQueue() {
+    const rows = await this.prisma.interviewBooking.findMany({
+      where: { status: 'completed_pending_review' },
+      orderBy: { scheduledAt: 'asc' },
+      take: 100,
+      include: {
+        user: { select: { email: true, studentProfile: { select: { fullName: true } } } },
+      },
+    });
+    const skillIds = [...new Set(rows.map((r) => r.skillId).filter(Boolean) as string[])];
+    const skills = skillIds.length
+      ? await this.prisma.skillCatalog.findMany({
+          where: { id: { in: skillIds } },
+          select: { id: true, name: true },
         })
-      : null;
-    const skillName = skill?.name ?? 'your skill';
+      : [];
+    const nameById = new Map(skills.map((s) => [s.id, s.name]));
+    return rows.map((r) => ({
+      id: r.id,
+      scheduledAt: r.scheduledAt,
+      score: r.score,
+      result: r.result,
+      panelNotes: r.panelNotes,
+      recordingUrl: r.recordingUrl,
+      skillName: r.skillId ? (nameById.get(r.skillId) ?? null) : null,
+      studentName: r.user.studentProfile?.fullName ?? r.user.email,
+    }));
+  }
+
+  /**
+   * Release a reviewed interview. Pass → award L4 (Expert-Verified). This is the
+   * only path that promotes a skill to L4 now (the in-room score just recommends).
+   */
+  async adminRelease(bookingId: string, pass: boolean) {
+    const booking = await this.prisma.interviewBooking.findUnique({ where: { id: bookingId } });
+    if (!booking) throw new NotFoundException('Interview not found.');
+    if (booking.status !== 'completed_pending_review') {
+      throw new BadRequestException('Only interviews pending review can be released.');
+    }
+    const updated = await this.prisma.interviewBooking.update({
+      where: { id: bookingId },
+      data: {
+        status: pass ? 'released_pass' : 'released_fail',
+        result: pass ? 'L4_VERIFIED' : 'FEEDBACK_ONLY',
+        reviewReleasedAt: new Date(),
+      },
+    });
+    if (pass && booking.skillId) {
+      await this.awardL4(booking.userId, booking.skillId, 'EXPERT_VERIFIED');
+    }
+    const skillName = await this.skillName(booking.skillId);
     void this.notifications.emit(
       booking.userId,
       pass ? 'interview_passed' : 'interview_failed',
       pass
         ? {
             title: 'Expert interview passed 🎉',
-            body: `You passed your ${skillName} interview — it's now verified at L4 (Expert).`,
+            body: `You passed your ${skillName} interview. It's now verified at L4 (Expert).`,
             href: '/dashboard/skills',
           }
         : {
@@ -210,15 +270,97 @@ export class InterviewerService {
     return updated;
   }
 
+  /** Renew / suspend / reactivate an interviewer's license (Ch.6). */
+  async adminSetLicense(userId: string, action: 'renew' | 'suspend' | 'reactivate') {
+    const profile = await this.prisma.interviewerProfile.findUnique({ where: { userId } });
+    if (!profile) throw new NotFoundException('Interviewer not found.');
+    if (action === 'renew') {
+      const now = new Date();
+      const due = new Date(now);
+      due.setMonth(now.getMonth() + 3);
+      return this.prisma.interviewerProfile.update({
+        where: { userId },
+        data: { licenseStatus: 'active', licenseRenewedAt: now, licenseDueAt: due },
+      });
+    }
+    return this.prisma.interviewerProfile.update({
+      where: { userId },
+      data: { licenseStatus: action === 'suspend' ? 'suspended' : 'active' },
+    });
+  }
+
+  /**
+   * Build a fortnightly payout batch. Interviewers are paid per interview they
+   * paneled in the period, regardless of outcome (Ch.6) — near pass-through of
+   * the ₹250 fee split across the panel. Idempotent per interviewer+period.
+   */
+  async runPayouts(periodStartIso: string, periodEndIso: string) {
+    const PER_PANELIST_PAISE = 12500; // ~₹125 per interview per panelist
+    const periodStart = new Date(periodStartIso);
+    const periodEnd = new Date(periodEndIso);
+    const bookings = await this.prisma.interviewBooking.findMany({
+      where: {
+        reviewReleasedAt: { gte: periodStart, lte: periodEnd },
+        status: { in: ['released_pass', 'released_fail'] },
+      },
+      select: { interviewerId: true, panelist2Id: true },
+    });
+    const counts = new Map<string, number>();
+    for (const b of bookings) {
+      for (const id of [b.interviewerId, b.panelist2Id]) {
+        if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
+    let created = 0;
+    for (const [interviewerId, count] of counts) {
+      const existing = await this.prisma.interviewerPayout.findFirst({
+        where: { interviewerId, periodStart, periodEnd },
+      });
+      if (existing) continue;
+      const gross = count * PER_PANELIST_PAISE;
+      const tds = 0; // configurable, pending CA confirmation (Ch.12)
+      await this.prisma.interviewerPayout.create({
+        data: {
+          interviewerId,
+          periodStart,
+          periodEnd,
+          grossAmountPaise: gross,
+          tdsDeductedPaise: tds,
+          netAmountPaise: gross - tds,
+          status: 'pending',
+        },
+      });
+      created += 1;
+    }
+    return { created, interviewers: counts.size };
+  }
+
+  private async skillName(skillId: string | null): Promise<string> {
+    if (!skillId) return 'your skill';
+    const skill = await this.prisma.skillCatalog.findUnique({
+      where: { id: skillId },
+      select: { name: true },
+    });
+    return skill?.name ?? 'your skill';
+  }
+
   /** Promote (or create) the student's UserSkill for this skill to L4_EXPERT. */
-  private async awardL4(studentId: string, skillId: string) {
+  private async awardL4(
+    studentId: string,
+    skillId: string,
+    method: L4VerificationMethod = 'EXPERT_VERIFIED',
+  ) {
     await this.prisma.userSkill.upsert({
       where: { userId_skillId: { userId: studentId, skillId } },
-      update: { highestVerificationLayer: VerificationLayer.L4_EXPERT },
+      update: {
+        highestVerificationLayer: VerificationLayer.L4_EXPERT,
+        l4VerificationMethod: method,
+      },
       create: {
         userId: studentId,
         skillId,
         highestVerificationLayer: VerificationLayer.L4_EXPERT,
+        l4VerificationMethod: method,
       },
     });
     // Recompute is L4-floor-aware, so this won't be downgraded.

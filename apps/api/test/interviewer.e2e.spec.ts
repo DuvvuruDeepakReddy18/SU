@@ -10,7 +10,8 @@ import { InterviewerService } from '../src/modules/interviewer/interviewer.servi
 /**
  * Interviewer portal e2e — the full L4 award path:
  *   admin invites interviewer → interviewer claims a booking from the pool
- *   → scores a pass → student's skill becomes L4_EXPERT.
+ *   → scores a pass (held for the ~48h review window, no L4 yet)
+ *   → admin releases → student's skill becomes L4_EXPERT (Expert-Verified).
  *
  * This is the only path that grants L4 anywhere in the system, so it gets a
  * dedicated end-to-end proof.
@@ -122,7 +123,7 @@ describe('L4 award flow', () => {
       .expect(400);
   });
 
-  it('scoring a pass awards the student L4 on the skill', async () => {
+  it('scoring a pass holds the result for the review window (no L4 yet)', async () => {
     await request(app.getHttpServer())
       .post(`${PREFIX}/interviewer/mine/${bookingId}/score`)
       .set('Authorization', `Bearer ${interviewerToken}`)
@@ -131,13 +132,28 @@ describe('L4 award flow', () => {
         if (![200, 201].includes(r.status)) throw new Error(`score ${r.status}: ${r.text}`);
       });
 
+    const booking = await prisma.interviewBooking.findUnique({ where: { id: bookingId } });
+    expect(booking?.status).toBe('completed_pending_review');
+    expect(booking?.result).toBe('L4_VERIFIED'); // provisional panel recommendation
+
+    // L4 must NOT be granted until an admin releases.
+    const us = await prisma.userSkill.findUnique({
+      where: { userId_skillId: { userId: studentId!, skillId } },
+    });
+    expect(us?.highestVerificationLayer).not.toBe('L4_EXPERT');
+  });
+
+  it('admin release awards L4 (Expert-Verified)', async () => {
+    await app.get(InterviewerService).adminRelease(bookingId, true);
+
+    const booking = await prisma.interviewBooking.findUnique({ where: { id: bookingId } });
+    expect(booking?.status).toBe('released_pass');
+    expect(booking?.reviewReleasedAt).not.toBeNull();
+
     const us = await prisma.userSkill.findUnique({
       where: { userId_skillId: { userId: studentId!, skillId } },
     });
     expect(us?.highestVerificationLayer).toBe('L4_EXPERT');
-
-    const booking = await prisma.interviewBooking.findUnique({ where: { id: bookingId } });
-    expect(booking?.status).toBe('passed');
-    expect(booking?.result).toBe('L4_VERIFIED');
+    expect(us?.l4VerificationMethod).toBe('EXPERT_VERIFIED');
   });
 });
