@@ -6,17 +6,21 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseInterceptors,
 } from '@nestjs/common';
 import { createZodDto, ZodValidationPipe } from 'nestjs-zod';
-import { BookInterviewSchema } from '@skillverify/shared';
+import { BookInterviewSchema, BookSlotSchema, GenerateSlotsSchema } from '@skillverify/shared';
 import { InterviewsService } from './interviews.service';
 import { RazorpayService } from './razorpay.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { IdempotencyInterceptor } from '../../common/interceptors/idempotency.interceptor';
 import type { JwtPayload } from '@skillverify/shared';
 
 class BookInterviewDto extends createZodDto(BookInterviewSchema) {}
+class BookSlotDto extends createZodDto(BookSlotSchema) {}
+class GenerateSlotsDto extends createZodDto(GenerateSlotsSchema) {}
 
 @Controller('interviews')
 export class InterviewsController {
@@ -40,6 +44,29 @@ export class InterviewsController {
   @UseInterceptors(IdempotencyInterceptor)
   book(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: BookInterviewDto) {
     return this.svc.book(u.sub, dto);
+  }
+
+  // ---------- Daily-slot model (Ch.6) ----------
+
+  /** Open slots for a given L3-proven skill's domain. */
+  @Get('slots')
+  slots(@CurrentUser() u: JwtPayload, @Query('skillId') skillId: string) {
+    if (!skillId) throw new BadRequestException('skillId is required.');
+    return this.svc.availableSlots(u.sub, skillId);
+  }
+
+  /** Book a slot — reserves the seat and randomly pairs the panel. */
+  @Post('slots/book')
+  @UseInterceptors(IdempotencyInterceptor)
+  bookSlot(@CurrentUser() u: JwtPayload, @Body(ZodValidationPipe) dto: BookSlotDto) {
+    return this.svc.bookSlot(u.sub, dto);
+  }
+
+  /** Admin/ops: generate daily slots per domain for the next N days. */
+  @Post('slots/generate')
+  @Roles('PLATFORM_ADMIN')
+  generateSlots(@Body(ZodValidationPipe) dto: GenerateSlotsDto) {
+    return this.svc.generateSlots(dto);
   }
 
   @Delete(':id')
