@@ -4,7 +4,28 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { CommunityPostCreateDto, CommunityCommentCreateDto } from './dto';
 
 // Minimal keyword filter for MVP. Replace with a proper service later.
-const BANNED = ['fuck', 'shit', 'cunt', 'nigger', 'faggot'];
+// Whole-word matching (tokenise on non-letters) so innocent words that merely
+// CONTAIN a banned substring — Scunthorpe, shitake, classic, assess — are not
+// flagged. The previous substring approach had that false-positive bug.
+const BANNED = new Set([
+  'fuck',
+  'fucking',
+  'fucked',
+  'fucker',
+  'motherfucker',
+  'shit',
+  'shitty',
+  'bullshit',
+  'cunt',
+  'nigger',
+  'nigga',
+  'faggot',
+  'bitch',
+  'asshole',
+]);
+function hasProfanity(lowerText: string): boolean {
+  return lowerText.split(/[^a-z]+/).some((tok) => tok.length > 0 && BANNED.has(tok));
+}
 
 type ListOpts = {
   userId: string;
@@ -130,7 +151,7 @@ export class CommunityService {
 
   async create(userId: string, dto: CommunityPostCreateDto) {
     const lower = `${dto.title ?? ''} ${dto.body}`.toLowerCase();
-    if (BANNED.some((w) => lower.includes(w))) {
+    if (hasProfanity(lower)) {
       throw new ForbiddenException('Post contains disallowed language.');
     }
     return this.prisma.communityPost.create({
@@ -272,7 +293,7 @@ export class CommunityService {
     const post = await this.prisma.communityPost.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundException();
     const lower = dto.body.toLowerCase();
-    if (BANNED.some((w) => lower.includes(w))) {
+    if (hasProfanity(lower)) {
       throw new ForbiddenException('Comment contains disallowed language.');
     }
     // Validate parentCommentId actually belongs to the same post.
