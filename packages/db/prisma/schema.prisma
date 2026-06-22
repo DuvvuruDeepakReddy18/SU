@@ -77,6 +77,8 @@ model User {
   verificationAudits    VerificationAudit[]
   interviewBookings     InterviewBooking[] @relation("StudentBookings")
   conductedInterviews   InterviewBooking[] @relation("ConductedInterviews")
+  panelistInterviews    InterviewBooking[] @relation("PanelistInterviews")
+  interviewerPayouts    InterviewerPayout[] @relation("InterviewerPayouts")
   interviewerProfile    InterviewerProfile?
   postedDrives          PlacementDrive[] @relation("PostedDrives")
   placementApplications PlacementApplication[]
@@ -518,13 +520,36 @@ model InterviewBooking {
   interviewer   User?  @relation("ConductedInterviews", fields: [interviewerId], references: [id], onDelete: SetNull)
   skillId     String?
   scheduledAt DateTime
-  status      String   @default("scheduled") // "scheduled" | "passed" | "failed" | "cancelled" | "no_show"
+  // Lifecycle: "booked" → "completed_pending_review" → "released_pass" |
+  // "released_fail"; or "cancelled" | "no_show". (Legacy rows may hold
+  // "scheduled" | "passed" | "failed".)
+  status      String   @default("booked")
   notes       String?
   panelNotes  String?
   // Overall interviewer score (0–100), set when scored.
   score       Int?
   result      String?  // "L4_VERIFIED" | "FEEDBACK_ONLY"
   meetingUrl  String?  // auto-generated Jitsi room URL
+  // Daily-slot model (Ch.6). Null for legacy free-time bookings.
+  slotId      String?
+  slot        InterviewSlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  // Panel of up to 2. interviewerId above is panelist 1; panelist2 is paired
+  // randomly + independently at confirmation (anti-collusion, Ch.6). Null for
+  // single-panel skills / legacy bookings.
+  panelist2Id String?
+  panelist2   User?    @relation("PanelistInterviews", fields: [panelist2Id], references: [id], onDelete: SetNull)
+  // Delayed result release (~48h audit window, Ch.6) — set when results go live.
+  reviewReleasedAt DateTime?
+  // Recording + transcript (retained, access-controlled). Pipeline gated.
+  recordingUrl String?
+  transcript   String?
+  // Student's choice whether this attempt is public on their portfolio (Ch.6).
+  // Recruiters always see the last 2 attempts regardless (a query-level rule).
+  publicVisibility Boolean @default(false)
+  // Configurable fee line items (Ch.12): base + GST stored separately so rates
+  // can change without a rewrite. amountInrPaise stays the charged total.
+  baseAmountPaise   Int?
+  gstAmountPaise     Int?
   // Razorpay payment fields — null when the platform is in free-beta mode.
   // Populated by /interviews/payments/verify on a successful signature check.
   razorpayOrderId   String?
@@ -535,6 +560,8 @@ model InterviewBooking {
 
   @@index([userId, scheduledAt])
   @@index([interviewerId])
+  @@index([panelist2Id])
+  @@index([slotId])
   @@index([status])
 }
 
@@ -552,9 +579,50 @@ model InterviewerProfile {
   // from the pool.
   expertise String[]
   active    Boolean  @default(true)
+  // Capacity planning (Ch.6): interviews the panelist commits to per day.
+  minDailyCommitment Int @default(3)
+  // Periodic re-licensing (Ch.6 anti-collusion) — renewed every 2–3 months.
+  licenseStatus    String    @default("active") // "active" | "pending_renewal" | "suspended"
+  licenseRenewedAt DateTime?
+  licenseDueAt     DateTime?
   createdAt DateTime @default(now())
 
   @@index([active])
+  @@index([licenseStatus])
+}
+
+// A bookable interview slot. Capacity is bounded per domain/time so no single
+// interviewer pool is overloaded (Ch.6 daily-slot model, reverses fixed-days).
+model InterviewSlot {
+  id          String   @id @default(cuid())
+  startsAt    DateTime // day + start time (UTC)
+  domain      String   // skill category this slot serves (domain-aware capacity)
+  panelSize   Int      @default(2) // panelists required (1 or 2), per-skill (Ch.6)
+  capacity    Int      @default(10) // seat cap for this domain/time
+  bookedCount Int      @default(0)
+  bookings    InterviewBooking[]
+  createdAt   DateTime @default(now())
+
+  @@index([startsAt])
+  @@index([domain, startsAt])
+}
+
+// Fortnightly interviewer payout batch (Ch.6). Interviewers are paid regardless
+// of interview outcome; amounts are near pass-through of the student fee.
+model InterviewerPayout {
+  id            String   @id @default(cuid())
+  interviewerId String
+  interviewer   User     @relation("InterviewerPayouts", fields: [interviewerId], references: [id], onDelete: Cascade)
+  periodStart   DateTime
+  periodEnd     DateTime
+  grossAmountPaise Int
+  tdsDeductedPaise Int      @default(0) // configurable, pending CA confirmation (Ch.12)
+  netAmountPaise   Int
+  status        String   @default("pending") // "pending" | "paid"
+  createdAt     DateTime @default(now())
+
+  @@index([interviewerId])
+  @@index([status])
 }
 
 // ---------- Campus placement drives ----------
