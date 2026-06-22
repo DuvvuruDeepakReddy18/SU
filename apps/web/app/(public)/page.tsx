@@ -8,6 +8,7 @@ import { Sparkles, ArrowRight, Zap, ShieldCheck } from 'lucide-react';
 
 import { DeviceShowcase } from '@/components/landing/device-showcase';
 import { LandingStats } from '@/components/landing/landing-stats';
+import { LandingFeed } from '@/components/landing/landing-feed';
 import { SceneProblem } from '@/components/landing/scene-problem';
 import { SceneLayers } from '@/components/landing/scene-layers';
 import { SceneFlow } from '@/components/landing/scene-flow';
@@ -184,6 +185,9 @@ export default function LandingPage() {
       <div id="for-you">
         <SceneAudience />
       </div>
+
+      {/* Live community feed marquee */}
+      <LandingFeed />
 
       {/* ============ SCENE 7 — FINAL CTA ============ */}
       <SceneFinal />
