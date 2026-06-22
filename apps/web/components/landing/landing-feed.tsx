@@ -27,7 +27,7 @@ const POSTS: Post[] = [
     name: 'Priya K.',
     inst: 'BITS Pilani',
     tag: 'placements',
-    body: 'A recruiter reached out through my verified profile — interview next week!',
+    body: 'A recruiter reached out through my verified profile. Interview next week!',
     up: 98,
     comments: 24,
   },
