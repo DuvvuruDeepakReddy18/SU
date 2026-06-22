@@ -7,6 +7,7 @@ import { Magnetic } from '@/components/interactive';
 import { Sparkles, ArrowRight, Zap, ShieldCheck } from 'lucide-react';
 
 import { DeviceShowcase } from '@/components/landing/device-showcase';
+import { LandingStats } from '@/components/landing/landing-stats';
 import { SceneProblem } from '@/components/landing/scene-problem';
 import { SceneLayers } from '@/components/landing/scene-layers';
 import { SceneFlow } from '@/components/landing/scene-flow';
@@ -161,6 +162,9 @@ export default function LandingPage() {
           <div className="h-8 w-px bg-gradient-to-b from-stone-400/60 to-transparent" />
         </motion.div>
       </section>
+
+      {/* Animated stat band */}
+      <LandingStats />
 
       {/* ============ SCENE 2 — PROBLEM ============ */}
       <SceneProblem />
