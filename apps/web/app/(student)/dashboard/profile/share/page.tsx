@@ -5,7 +5,16 @@ import { useSession } from 'next-auth/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, ChevronUp, ChevronDown, Copy, ExternalLink, Sparkles } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronUp,
+  ChevronDown,
+  Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
@@ -52,15 +61,19 @@ export default function SharePage() {
   // Local form state, seeded from server
   const [theme, setTheme] = useState<ShareTheme>('default');
   const [order, setOrder] = useState<ShareSection[]>([...SHARE_SECTIONS]);
+  const [hidden, setHidden] = useState<Set<ShareSection>>(new Set());
 
   useEffect(() => {
     if (!profile) return;
     setTheme(((profile.shareTheme as ShareTheme) ?? 'default') as ShareTheme);
-    setOrder(
-      (profile.shareSectionsOrder ?? SHARE_SECTIONS).filter((s): s is ShareSection =>
-        (SHARE_SECTIONS as readonly string[]).includes(s),
-      ),
+    const saved = (profile.shareSectionsOrder ?? SHARE_SECTIONS).filter((s): s is ShareSection =>
+      (SHARE_SECTIONS as readonly string[]).includes(s),
     );
+    // Sections absent from the saved order are hidden. Keep them in the list
+    // (appended) so they can be toggled back on.
+    const missing = (SHARE_SECTIONS as readonly ShareSection[]).filter((s) => !saved.includes(s));
+    setOrder([...saved, ...missing]);
+    setHidden(new Set(missing));
   }, [profile]);
 
   const save = useMutation({
@@ -68,7 +81,11 @@ export default function SharePage() {
       api('/profile/me', {
         method: 'PATCH',
         token,
-        body: JSON.stringify({ shareTheme: theme, shareSectionsOrder: order }),
+        body: JSON.stringify({
+          shareTheme: theme,
+          // Only visible sections are saved; hidden ones drop out of the order.
+          shareSectionsOrder: order.filter((s) => !hidden.has(s)),
+        }),
       }),
     onSuccess: () => {
       toast.success('Public portfolio updated');
@@ -88,6 +105,14 @@ export default function SharePage() {
     const next = [...order];
     [next[i + 1], next[i]] = [next[i], next[i + 1]];
     setOrder(next);
+  }
+  function toggleHidden(s: ShareSection) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
   }
 
   const publicUrl =
@@ -177,43 +202,70 @@ export default function SharePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Section order</CardTitle>
+          <CardTitle className="text-base">Sections</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Reorder with the arrows, or hide a section (e.g. empty Certifications) from your public
+            profile with the eye toggle.
+          </p>
         </CardHeader>
         <CardContent className="space-y-2">
-          {order.map((s, i) => (
-            <div key={s} className="flex items-center justify-between rounded-md border p-2.5">
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground tabular-nums w-4">{i + 1}.</span>
-                <span className="text-sm font-medium">{SECTION_LABELS[s]}</span>
+          {order.map((s, i) => {
+            const isHidden = hidden.has(s);
+            return (
+              <div
+                key={s}
+                className={cn(
+                  'flex items-center justify-between rounded-md border p-2.5',
+                  isHidden && 'opacity-50',
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-4 text-xs tabular-nums text-muted-foreground">{i + 1}.</span>
+                  <span className="text-sm font-medium">{SECTION_LABELS[s]}</span>
+                  {isHidden && <span className="text-[10px] text-muted-foreground">hidden</span>}
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => toggleHidden(s)}
+                    className="rounded p-1 hover:bg-secondary"
+                    aria-label={isHidden ? 'Show section' : 'Hide section'}
+                  >
+                    {isHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={() => moveUp(i)}
+                    disabled={i === 0}
+                    className="rounded p-1 hover:bg-secondary disabled:opacity-30"
+                    aria-label="Move up"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => moveDown(i)}
+                    disabled={i === order.length - 1}
+                    className="rounded p-1 hover:bg-secondary disabled:opacity-30"
+                    aria-label="Move down"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => moveUp(i)}
-                  disabled={i === 0}
-                  className="rounded p-1 hover:bg-secondary disabled:opacity-30"
-                  aria-label="Move up"
-                >
-                  <ChevronUp className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => moveDown(i)}
-                  disabled={i === order.length - 1}
-                  className="rounded p-1 hover:bg-secondary disabled:opacity-30"
-                  aria-label="Move down"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 
-      <div className="flex gap-2 justify-end">
+      <div className="flex items-center justify-end gap-3">
+        {order.every((s) => hidden.has(s)) && (
+          <span className="text-xs text-amber-600">Keep at least one section visible.</span>
+        )}
         <Button variant="outline" onClick={() => window.history.back()}>
           Cancel
         </Button>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
+        <Button
+          onClick={() => save.mutate()}
+          disabled={save.isPending || order.every((s) => hidden.has(s))}
+        >
           {save.isPending ? 'Saving…' : 'Save'}
         </Button>
       </div>
