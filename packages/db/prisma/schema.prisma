@@ -80,6 +80,7 @@ model User {
   panelistInterviews    InterviewBooking[] @relation("PanelistInterviews")
   interviewerPayouts    InterviewerPayout[] @relation("InterviewerPayouts")
   interviewerProfile    InterviewerProfile?
+  aiScreenAttempts      AiScreenAttempt[]
   postedDrives          PlacementDrive[] @relation("PostedDrives")
   placementApplications PlacementApplication[]
   postedCompetitions    Competition[]    @relation("PostedCompetitions")
@@ -623,6 +624,28 @@ model InterviewerPayout {
 
   @@index([interviewerId])
   @@index([status])
+}
+
+// AI mock-interview / pre-screening attempt (Ch.7, prep-tool half). A multi-turn
+// adaptive interview conducted by an LLM; the transcript, score and per-area
+// feedback are stored. Free prep tool for now (not granting L4).
+model AiScreenAttempt {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId       String? // SkillCatalog id (no FK; name resolved on read)
+  skillName     String?
+  status        String    @default("in_progress") // "in_progress" | "completed"
+  transcript    Json      @default("[]") // [{ q: string, a: string | null }]
+  questionCount Int       @default(0)
+  score         Int? // 0–100, set on completion
+  passed        Boolean?
+  areaBreakdown Json? // [{ area, score, note }]
+  feedback      String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  @@index([userId, createdAt])
 }
 
 // ---------- Campus placement drives ----------

@@ -11,3 +11,4 @@ export * from './interviewer';
 export * from './interview';
 export * from './competition';
 export * from './account';
+export * from './ai-screen';

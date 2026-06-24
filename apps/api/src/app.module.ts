@@ -29,6 +29,7 @@ import { FreelanceModule } from './modules/freelance/freelance.module';
 import { InstitutionsModule } from './modules/institutions/institutions.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { AiScreenModule } from './modules/ai-screen/ai-screen.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { RecruitersModule } from './modules/recruiters/recruiters.module';
 import { InstitutionAdminModule } from './modules/institution-admin/institution-admin.module';
@@ -67,6 +68,7 @@ import { InterviewerModule } from './modules/interviewer/interviewer.module';
     InstitutionsModule,
     AdminModule,
     ChatModule,
+    AiScreenModule,
     MessagesModule,
     RecruitersModule,
     InstitutionAdminModule,
