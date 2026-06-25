@@ -44,7 +44,13 @@ async function bootstrap() {
     origin: (origin, cb) => {
       if (!origin) return cb(null, true); // same-origin / curl
       if (explicit.includes(origin)) return cb(null, true);
-      if (/\.vercel\.app$/.test(new URL(origin).hostname)) return cb(null, true);
+      const host = new URL(origin).hostname;
+      if (/\.vercel\.app$/.test(host)) return cb(null, true);
+      // Always allow the production domain + any subdomain (www, app, etc.)
+      // so the live site works without re-deploying to tweak CORS_ORIGINS.
+      if (host === 'skillvaults.co.in' || host.endsWith('.skillvaults.co.in')) {
+        return cb(null, true);
+      }
       return cb(new Error(`CORS blocked: ${origin}`));
     },
     credentials: true,
