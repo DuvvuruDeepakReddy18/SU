@@ -48,7 +48,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # pnpm 11.x (pinned above) requires Node >= 22.13 — it loads the
+          # node:sqlite built-in for its store. Node 20 fails at setup with
+          # ERR_UNKNOWN_BUILTIN_MODULE before any step runs.
+          node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
