@@ -32,10 +32,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Web build resolves workspace deps; generate the Prisma client + build
-      # shared so `next build` (run by Playwright's webServer) succeeds.
+      # Playwright's webServer runs `next build` directly (not via turbo), so
+      # the workspace deps it imports must be built first. ui exposes
+      # @skillverify/ui/utils from ./dist — without it the build fails with
+      # "Module not found: Can't resolve '@skillverify/ui/utils'".
       - run: pnpm --filter @skillverify/db generate
       - run: pnpm --filter @skillverify/shared build
+      - run: pnpm --filter @skillverify/ui build
 
       - name: Install Playwright browser
         run: pnpm --filter @skillverify/web exec playwright install --with-deps chromium
