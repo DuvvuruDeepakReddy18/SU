@@ -11,5 +11,15 @@ const nextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },
+  // The marketing landing page is a self-contained static site
+  // (public/landing/{index.html,styles.css,main.js,frames/}) — a scroll-driven
+  // film build with no React. Serve it at the root URL. `beforeFiles` runs the
+  // rewrite ahead of the app router, so `/` resolves to the static file while
+  // every other route (/signup, /login, /dashboard, …) is unaffected.
+  async rewrites() {
+    return {
+      beforeFiles: [{ source: '/', destination: '/landing/index.html' }],
+    };
+  },
 };
 export default nextConfig;

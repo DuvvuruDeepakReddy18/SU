@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Skill Vaults — The network where proof talks.</title>
+<meta name="description" content="Skill Vaults is the verified skill network for Indian campuses. A cinematic verification film plays behind a live, interactive product — hire signal, not noise." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2314c98f'/%3E%3Cpath d='M9 17l5 5 10-11' stroke='%23050608' stroke-width='3.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<script>if('scrollRestoration' in history) history.scrollRestoration='manual'; window.scrollTo(0,0);</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,600;0,800;0,900;1,900&family=Instrument+Serif:ital@0;1&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/landing/styles.css?v=4" />
+</head>
+<body>
+
+  <!-- ===== living 3D film background (scroll-scrubbed) + scrim ===== -->
+  <canvas id="filmCanvas" aria-hidden="true"></canvas>
+  <div id="filmScrim" aria-hidden="true"></div>
+  <div class="watermark" id="watermark" aria-hidden="true">
+    <span>PROOF</span><span>VERIFIED</span><span>FUTURE OF</span><span>HIRING</span>
+  </div>
+
+  <header id="nav">
+    <a class="nav-brand" href="#top">Skill Vaults<i>✓</i></a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#proof">The proof</a>
+      <a href="#students">Students</a>
+      <a href="#ai">Verification</a>
+      <a href="#recruiters">Recruiters</a>
+      <a href="/login">Sign in</a>
+    </nav>
+    <a class="nav-cta" href="/signup">Get verified</a>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ HERO ============ -->
+    <section id="hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="tag tag-green" data-reveal>✓ &nbsp;254 campuses · India</p>
+          <h1 data-reveal>THE NETWORK<br />WHERE <em>PROOF</em><br />TALKS.</h1>
+          <p class="hero-sub" data-reveal>Every CGPA backed by a marksheet. Every skill proven in the act.
+            Every badge earned — never claimed.</p>
+          <div class="hero-ctas" data-reveal>
+            <a class="btn btn-green" href="/signup">Get verified — free</a>
+            <a class="btn btn-line" href="/company/signup">I'm hiring →</a>
+          </div>
+        </div>
+
+        <div class="phone phone-hero" id="phoneHero">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="app-head"><b id="appTitle">Skill Vaults</b><span class="app-avatar">PS</span></div>
+            <div class="app-body">
+
+              <div class="ptab active" data-tab="feed">
+                <article class="post">
+                  <div class="post-head">
+                    <span class="post-avatar av-blue">PS</span>
+                    <span><b>Priya Sharma</b> <i class="vbadge">✓ L3</i><br /><small>@priya_cse · NIT Warangal</small></span>
+                  </div>
+                  <p>Cleared the L3 gauntlet — 283/283. Jury score 9.1 on the systems round. 🧠⚡</p>
+                  <p class="post-chips"><span class="chip chip-mint">PROVEN</span><span class="chip chip-blue">CGPA 9.2 ✓</span></p>
+                  <div class="post-foot"><span>♥ 842</span><span>💬 128</span><span>↗</span></div>
+                </article>
+                <article class="post">
+                  <div class="post-head">
+                    <span class="post-avatar av-gold">AM</span>
+                    <span><b>Arjun Mehta</b> <i class="vbadge vb-gold">✓ L4</i><br /><small>@arjun_ml · IIT Indore</small></span>
+                  </div>
+                  <p>Expert interview cleared. The L4 panel does NOT play around. 🎯</p>
+                  <p class="post-chips"><span class="chip chip-gold">EXPERT VERIFIED</span></p>
+                  <div class="post-foot"><span>♥ 1.2k</span><span>💬 312</span><span>↗</span></div>
+                </article>
+              </div>
+
+              <div class="ptab" data-tab="practice">
+                <p class="ptab-h">Practice arena · <b>283 / 283 solved</b></p>
+                <div class="prow"><span>Two Sum</span><i class="ok">✓ solved</i></div>
+                <div class="prow"><span>Binary tree paths</span><i class="ok">✓ solved</i></div>
+                <div class="prow"><span>DP · coin change</span><i class="ok">✓ solved</i></div>
+                <div class="prow"><span>Dijkstra shortest path</span><i class="ok">✓ solved</i></div>
+                <div class="prow"><span>Segment trees</span><i>in progress</i></div>
+              </div>
+
+              <div class="ptab" data-tab="ranks">
+                <p class="ptab-h">Institute leaderboard</p>
+                <div class="lrow gold"><b>1</b><span>Priya Sharma</span><i>9.1</i></div>
+                <div class="lrow"><b>2</b><span>Arjun Mehta</span><i>8.9</i></div>
+                <div class="lrow"><b>3</b><span>Sneha K</span><i>8.6</i></div>
+                <div class="lrow"><b>4</b><span>Rahul V</span><i>8.4</i></div>
+                <div class="lrow"><b>5</b><span>Aisha N</span><i>8.2</i></div>
+              </div>
+
+              <div class="ptab" data-tab="profile">
+                <div class="prof-top"><span class="prof-av">PS</span><div><b>Priya Sharma</b><br /><small>B.Tech CSE '26 · NIT Warangal</small></div></div>
+                <div class="badge-row"><span class="pb b1">L1 ✓</span><span class="pb b2">L2 ✓</span><span class="pb b3">L3 ✓</span><span class="pb b4">L4 ✓</span></div>
+                <div class="prow"><span>CGPA</span><i class="ok">9.2 · verified</i></div>
+                <div class="prow"><span>Skills proven</span><i class="ok">Python · DSA · ML</i></div>
+                <div class="prow"><span>Trust level</span><i class="ok">L4 · Expert</i></div>
+              </div>
+
+            </div>
+            <nav class="tabbar" aria-label="App">
+              <button type="button" data-go="feed" class="on"><i>⌂</i><span>Feed</span></button>
+              <button type="button" data-go="practice"><i>⌬</i><span>Practice</span></button>
+              <button type="button" data-go="ranks"><i>★</i><span>Ranks</span></button>
+              <button type="button" data-go="profile"><i>⊙</i><span>You</span></button>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="marquee" aria-hidden="true">
+        <div class="marquee-track">
+          <b>BE VERIFIED</b><span class="pill pill-blue">L1 · ACADEMIC</span>
+          <b>BE PROVEN</b><span class="pill pill-mint">L3 · PRACTICE</span>
+          <b>BE HIRED</b><span class="pill pill-green">✓ VERIFIED</span>
+          <b>BE REAL</b><span class="pill pill-gold">NO FICTION</span>
+          <b>BE VERIFIED</b><span class="pill pill-blue">L1 · ACADEMIC</span>
+          <b>BE PROVEN</b><span class="pill pill-mint">L3 · PRACTICE</span>
+          <b>BE HIRED</b><span class="pill pill-green">✓ VERIFIED</span>
+          <b>BE REAL</b><span class="pill pill-gold">NO FICTION</span>
+        </div>
+      </div>
+
+      <div class="scroll-cue" id="scroll-cue"><span>scroll — the proof builds behind</span><i></i></div>
+    </section>
+
+    <!-- ============ THE PROOF — trust model over the live film ============ -->
+    <section id="proof">
+      <div class="proof-head">
+        <p class="tag tag-green" data-reveal>the trust model</p>
+        <h2 data-reveal>Four layers.<br /><em>Zero benefit of the doubt.</em></h2>
+        <p class="proof-sub" data-reveal>Every skill sits at exactly one level — and the chain is enforced, not cosmetic.
+          Watch it assemble in the background as you scroll.</p>
+      </div>
+      <div class="proof-grid">
+        <article class="pcard" data-reveal><p class="pl pl-blue">L1 · academic</p><h3>Backed by the record.</h3><p>Marksheets sealed by admin approval. Until then, UNVERIFIED.</p></article>
+        <article class="pcard" data-reveal><p class="pl pl-cyan">L2 · certified</p><h3>Backed by certificates.</h3><p>Verified at upload. Un-screenable certs never become badges.</p></article>
+        <article class="pcard" data-reveal><p class="pl pl-green">L3 · proven</p><h3>Demonstrated, not declared.</h3><p>283 real problems, jury-scored events, projects built on-platform.</p></article>
+        <article class="pcard" data-reveal><p class="pl pl-gold">L4 · expert</p><h3>Validated face-to-face.</h3><p>A live interview with a domain expert — the highest signal we issue.</p></article>
+      </div>
+    </section>
+
+    <!-- ============ STATS ============ -->
+    <section id="stats">
+      <div class="stat" data-reveal><b data-count="254">0</b><span>partner campuses</span></div>
+      <div class="stat" data-reveal><b data-count="283">0</b><span>real problems</span></div>
+      <div class="stat" data-reveal><b data-count="4">0</b><span>trust layers</span></div>
+      <div class="stat" data-reveal><b>24/7</b><span>ai screening</span></div>
+    </section>
+
+    <!-- ============ FEATURES — pinned phone, swapping screens ============ -->
+    <section id="features">
+      <div class="feat-rail">
+
+        <div class="fstep" id="students" data-screen="0">
+          <p class="tag tag-blue" data-reveal>01 — Student Network</p>
+          <h2 data-reveal>One profile.<br />Zero doubt.</h2>
+          <p class="fcopy2" data-reveal>Practice on 283 real problems, compete in jury-scored events, join your
+            campus community — every win lands on your record as proof, not claims.</p>
+          <a class="flink" href="/signup" data-reveal>Explore the trust model →</a>
+          <div class="screen-slot">
+            <div class="pscreen" data-s="0">
+              <div class="app-head"><b>Skill Vaults</b><span class="app-tag tag-blue-bg">FEED</span></div>
+              <article class="post">
+                <div class="post-head"><span class="post-avatar av-blue">PS</span>
+                  <span><b>Priya Sharma</b> <i class="vbadge">✓ L3</i><br /><small>@priya_cse · 2h</small></span></div>
+                <p>That moment when your profile says <b>PROVEN</b> and you didn't type a single adjective. 💅</p>
+                <p class="post-chips"><span class="chip chip-mint">283/283 SOLVED</span><span class="chip chip-blue">CGPA 9.2 ✓</span></p>
+                <div class="post-foot"><span>♥ 842</span><span>💬 128</span><span>↗</span></div>
+              </article>
+              <article class="post">
+                <div class="post-head"><span class="post-avatar av-mint">SK</span>
+                  <span><b>Sneha K</b> <i class="vbadge">✓ L2</i><br /><small>@sneha_ds · 5h</small></span></div>
+                <p>AWS cert cleared screening → badge live in 40 minutes. The chain is real. ⛓️✨</p>
+                <p class="post-chips"><span class="chip chip-cyan">CERTIFIED</span></p>
+                <div class="post-foot"><span>♥ 410</span><span>💬 56</span><span>↗</span></div>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="fstep" id="ai" data-screen="1">
+          <p class="tag tag-mint" data-reveal>02 — Verification AI</p>
+          <h2 data-reveal>Screened by AI.<br />Sealed by humans.</h2>
+          <p class="fcopy2" data-reveal>Our pipeline OCR-reads marksheets and certificates in seconds, cross-checks
+            the records, and routes edge cases to human admins. Nothing goes verified on vibes.</p>
+          <a class="flink" href="/signup" data-reveal>See the pipeline →</a>
+          <div class="screen-slot">
+            <div class="pscreen" data-s="1">
+              <div class="app-head"><b>Verification</b><span class="app-tag tag-mint-bg">AI · LIVE</span></div>
+              <div class="bubble bubble-user">Uploaded: marksheet_sem6.pdf 📄</div>
+              <div class="bubble bubble-ai">OCR complete in <b>3.2s</b>. CGPA read: <b>9.2</b>. Institution match:
+                <b>NIT Warangal ✓</b>. No inconsistencies flagged.</div>
+              <div class="bubble bubble-ai">Routed to admin review. Average queue: <b>38 min</b>. 🕐</div>
+              <div class="bubble bubble-sys">✓ APPROVED — CGPA badge is now <b class="ok">VERIFIED · L1</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fstep" id="recruiters" data-screen="2">
+          <p class="tag tag-gold" data-reveal>03 — For Recruiters</p>
+          <h2 data-reveal>Hire signal,<br />not noise.</h2>
+          <p class="fcopy2" data-reveal>Search candidates by proof level, not keyword soup. Contact details stay
+            gated until the student approves the reveal. Consent first, always.</p>
+          <a class="flink" href="/company/signup" data-reveal>Book a recruiter demo →</a>
+          <div class="screen-slot">
+            <div class="pscreen" data-s="2">
+              <div class="app-head"><b>Talent Search</b><span class="app-tag tag-gold-bg">RECRUITER</span></div>
+              <div class="search-pill">python · L3+ · hyderabad</div>
+              <article class="cand"><span class="post-avatar av-blue">PS</span>
+                <span class="cand-body"><b>Priya S.</b> <i class="vbadge">✓ L3</i><br /><small>DSA · Python · CGPA 9.2 ✓</small></span>
+                <button class="cand-btn">request reveal</button></article>
+              <article class="cand"><span class="post-avatar av-gold">AM</span>
+                <span class="cand-body"><b>Arjun M.</b> <i class="vbadge vb-gold">✓ L4</i><br /><small>ML · expert interviewed</small></span>
+                <button class="cand-btn">request reveal</button></article>
+              <article class="cand cand-locked"><span class="post-avatar av-mint">●</span>
+                <span class="cand-body"><b>Contact gated</b><br /><small>PENDING STUDENT APPROVAL 🔒</small></span></article>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="phone-pin-col">
+        <div class="phone phone-pin" id="phonePin">
+          <div class="phone-notch"></div>
+          <div class="phone-screen" id="phoneScreens"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ INTEGRATION ============ -->
+    <section id="integration">
+      <div class="int-grid">
+        <div class="int-icons" data-reveal>
+          <span class="int-icon ic-blue">⚡</span><span class="int-icon ic-mint">⌬</span>
+          <span class="int-icon ic-gold">⎔</span><span class="int-icon ic-green">◈</span>
+        </div>
+        <div>
+          <h2 data-reveal>Built for<br />deep integration.</h2>
+          <p class="fcopy2" data-reveal>Skill Vaults plugs into campus life — TPO dashboards, institute-scoped drives,
+            a real code-runner, document vaults and payment rails. Every layer built for scale.</p>
+          <p class="int-list" data-reveal>judge0 · digilocker · razorpay · jitsi · bullmq · postgres</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section id="faq">
+      <h2 data-reveal>Frequently asked <em>questions</em></h2>
+      <div class="faq-list">
+        <details data-reveal><summary>Is Skill Vaults free for students?<i>+</i></summary>
+          <p>Yes — free during beta, and the verified profile stays free. Expert L4 interviews are payment-ready for launch, but on the house for now.</p></details>
+        <details data-reveal><summary>How does verification actually work?<i>+</i></summary>
+          <p>Upload your proof → AI pre-screens it in seconds → a human admin approves → the badge goes live. No evidence, no badge. Ever.</p></details>
+        <details data-reveal><summary>What exactly do recruiters see?<i>+</i></summary>
+          <p>Your verified badges and proof levels — never your contact details. PII stays gated until you approve each reveal request.</p></details>
+        <details data-reveal><summary>My college isn't listed. Can it join?<i>+</i></summary>
+          <p>254 institutions and counting. Your TPO can onboard the campus — roster management, drives and analytics included.</p></details>
+      </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section id="cta">
+      <p class="tag tag-green" data-reveal>the future of hiring is verified</p>
+      <h2 class="cta-h" data-reveal>STOP CLAIMING.<br /><em>START PROVING.</em></h2>
+      <p class="fcopy2 cta-sub" data-reveal>Whether you're a student building a profile that can't be doubted, or a
+        campus ready for digital evolution — let's collaborate.</p>
+      <div class="hero-ctas" data-reveal>
+        <a class="btn btn-green" href="/institution/signup">🎓 &nbsp;Deploy at your campus</a>
+        <a class="btn btn-line" href="/signup">Create your profile →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="foot-col">
+      <p class="nav-brand">Skill Vaults<i>✓</i></p>
+      <p class="foot-join">JOIN THE <em>NETWORK</em></p>
+      <p class="foot-sub">Stay ahead of verified hiring — proof, placements and campus intelligence.</p>
+    </div>
+    <div class="foot-col"><p class="foot-h">product</p>
+      <a href="/signup">Student network</a><a href="#ai">Verification AI</a>
+      <a href="/company/signup">Recruiter search</a><a href="#faq">FAQ</a></div>
+    <div class="foot-col"><p class="foot-h">portals</p>
+      <a href="/signup">Student sign-up</a><a href="/company/signup">For recruiters</a>
+      <a href="/institution/signup">For institutions</a><a href="/interviewer">Interviewer</a>
+      <a href="/login">Sign in</a><a href="/support">Support</a><a href="/admin">Admin</a></div>
+    <p class="foot-fine">© 2026 Skill Vaults · proof, not noise · made in India</p>
+  </footer>
+
+  <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+  <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+
+  <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="/landing/main.js?v=5" defer></script>
+</body>
+</html>

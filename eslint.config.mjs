@@ -14,6 +14,9 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/prisma/migrations/**',
       '**/coverage/**',
+      // Static marketing landing — vanilla browser JS (GSAP/Lenis globals),
+      // not part of the TS app and not for the app's lint rules.
+      '**/public/landing/**',
     ],
   },
   js.configs.recommended,

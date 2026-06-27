@@ -5,3 +5,5 @@ build
 .turbo
 pnpm-lock.yaml
 **/prisma/migrations/**
+# Static marketing landing — keep the vanilla files exactly as authored.
+**/public/landing/**
