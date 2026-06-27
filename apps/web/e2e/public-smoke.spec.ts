@@ -3,10 +3,11 @@ import { test, expect } from '@playwright/test';
 // Smoke tests for the unauthenticated surfaces. Deterministic — no API/DB/login
 // required. They catch broken routes, missing CTAs, and build regressions.
 
-test('landing page loads with brand + a get-started CTA', async ({ page }) => {
+test('landing page loads with brand + a get-verified CTA', async ({ page }) => {
+  // The landing is the static "livefilm" build served at / via rewrite.
   await page.goto('/');
-  await expect(page).toHaveTitle(/SkillVerify/i);
-  await expect(page.getByText(/Get started/i).first()).toBeVisible();
+  await expect(page).toHaveTitle(/Skill Vaults/i);
+  await expect(page.getByText(/Get verified/i).first()).toBeVisible();
 });
 
 test('login page shows the form, OAuth, and forgot-password', async ({ page }) => {
