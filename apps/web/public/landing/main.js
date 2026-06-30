@@ -38,6 +38,7 @@ const frameSrc = (i) => `/landing/frames/frame_${String(i).padStart(3, '0')}.web
 function loadFrame(i, cb) {
   if (frames[i]) { cb && cb(); return; }
   const img = new Image();
+  img.decoding = 'async';
   img.onload = () => { frames[i] = img; cb && cb(); };
   img.onerror = () => { cb && cb(); };
   img.src = frameSrc(i);
@@ -263,14 +264,52 @@ if (finePointer && !reduced) {
   });
 }
 
-/* ---------- preload frames (draw frame 0 immediately as the backdrop) ---------- */
+/* ------------------------------------------------------------
+   Frame loading — progressive, connection-aware, concurrency-limited.
+   Goal: the hero never looks broken and we never blast ~8 MB at once
+   (campus mobile data is precious). Frame 0 lands first; a coarse spread
+   makes the whole film scrubbable early; the rest fills in gently.
+   ------------------------------------------------------------ */
+const filmLoader = document.getElementById('filmLoader');
+const filmLoaderBar = document.getElementById('filmLoaderBar');
+function hideLoader() { if (filmLoader) filmLoader.classList.add('done'); }
+
 (function preload() {
-  loadFrame(0, () => { filmIdx = 0; filmDirty = true; });
-  const coarse = [];
-  for (let i = 0; i < FILM_N; i += 6) coarse.push(i);
-  let done = 0;
-  coarse.forEach((i) => loadFrame(i, () => {
-    done++;
-    if (done === coarse.length) for (let j = 0; j < FILM_N; j++) loadFrame(j);
-  }));
+  // Reduced motion: the film never scrubs, so a single static backdrop is all
+  // we need — don't pull the other 359 frames.
+  if (reduced) {
+    loadFrame(0, () => { filmIdx = 0; filmDirty = true; hideLoader(); });
+    return;
+  }
+
+  const conn = navigator.connection || {};
+  const slow = conn.saveData === true || /(^|\b)(slow-2g|2g|3g)$/.test(conn.effectiveType || '');
+  // On slow / data-saver links, settle for a sparse set (~60 frames). nearestFrame()
+  // keeps scrubbing smooth-ish on a fraction of the bytes. Fast links get them all.
+  const fillStep = slow ? 6 : 1;
+  const MAX_CONCURRENT = slow ? 3 : 8;
+
+  // Load order: hero frame, then a coarse spread (early scrub), then fill.
+  const order = [];
+  const seen = new Set();
+  const add = (i) => { if (i >= 0 && i < FILM_N && !seen.has(i)) { seen.add(i); order.push(i); } };
+  add(0);
+  for (let i = 0; i < FILM_N; i += 12) add(i); // coarse: whole film scrubbable fast
+  for (let i = 0; i < FILM_N; i += fillStep) add(i); // fill to final density
+  const total = order.length;
+  const coarseEnough = Math.min(total, 30); // loader fades once scrubbing is usable
+
+  let started = 0, loaded = 0, firstDrawn = false;
+  function pump() {
+    while (started - loaded < MAX_CONCURRENT && started < total) {
+      loadFrame(order[started++], () => {
+        loaded++;
+        if (!firstDrawn && frames[0]) { firstDrawn = true; filmIdx = 0; filmDirty = true; }
+        if (filmLoaderBar) filmLoaderBar.style.transform = `scaleX(${(loaded / total).toFixed(3)})`;
+        if (loaded >= coarseEnough) hideLoader();
+        pump();
+      });
+    }
+  }
+  pump();
 })();

@@ -56,6 +56,19 @@ h2 em, h1 em, .cta-h em, .foot-join em { font-style: normal; color: var(--green)
     radial-gradient(135% 115% at 50% 32%, rgba(5,6,10,0.34) 0%, rgba(5,6,10,0.64) 52%, rgba(3,4,7,0.9) 100%),
     linear-gradient(rgba(5,6,10,0.5), rgba(5,6,10,0.2) 18%, rgba(5,6,10,0.2) 82%, rgba(5,6,10,0.62));
 }
+/* film loading bar — thin, top-of-page, fades out once the film is scrubbable */
+#filmLoader {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 60;
+  pointer-events: none; opacity: 1; transition: opacity 0.6s var(--ease-out);
+}
+#filmLoader.done { opacity: 0; }
+#filmLoaderBar {
+  display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left;
+  background: linear-gradient(90deg, var(--green), var(--cyan));
+  box-shadow: 0 0 12px rgba(25,209,153,0.5);
+  transition: transform 0.25s var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) { #filmLoader { display: none; } }
 
 /* ---------- watermark megatype (faint, over the film) ---------- */
 .watermark {
