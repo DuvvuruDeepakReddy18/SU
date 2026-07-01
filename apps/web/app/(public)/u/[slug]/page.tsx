@@ -302,9 +302,9 @@ export default async function PublicPortfolio({ params }: { params: { slug: stri
         {sectionOrder.map((key) => sections[key])}
 
         <footer className={`mt-16 border-t pt-6 text-center text-xs ${theme.muted}`}>
-          <Link href="/" className="hover:underline">
+          <a href="/" className="hover:underline">
             Verified on SkillVerify
-          </Link>
+          </a>
         </footer>
       </div>
     </main>

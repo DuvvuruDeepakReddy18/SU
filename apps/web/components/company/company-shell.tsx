@@ -158,9 +158,9 @@ function StatusGate({ me }: { me: RecruiterMe }) {
           )}
         </p>
         <div className="mt-6 flex justify-center gap-3">
-          <Link href="/">
+          <a href="/">
             <Button variant="outline">Back to site</Button>
-          </Link>
+          </a>
           <Button variant="ghost" onClick={() => signOut({ callbackUrl: '/' })}>
             Sign out
           </Button>

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Phone, Mail, MessageSquare, LifeBuoy } from 'lucide-react';
 
@@ -13,12 +12,12 @@ const SUPPORT_EMAIL: string | null = null;
 export default function SupportPage() {
   return (
     <div className="container max-w-2xl py-12">
-      <Link
+      <a
         href="/"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6"
       >
         <ArrowLeft className="h-4 w-4" /> Home
-      </Link>
+      </a>
 
       <div className="flex items-center gap-3 mb-2">
         <LifeBuoy className="h-6 w-6 text-primary" />
