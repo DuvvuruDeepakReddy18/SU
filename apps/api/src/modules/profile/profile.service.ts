@@ -99,26 +99,58 @@ export class ProfileService {
   }
 
   async getPublicBySlug(slug: string) {
-    const profile = await this.prisma.studentProfile.findUnique({
-      where: { sharableSlug: slug },
-      include: {
+    // SECURITY: this is a @Public() endpoint keyed by a shareable slug, so it
+    // must return ONLY portfolio-safe fields. An explicit `select` (never a
+    // blanket `include`) is the guard — it structurally prevents leaking PII
+    // like governmentName, phone/phoneNumber, instituteEmail, resumeUrl,
+    // collegeIdUrl/collegeIdOcrExtracted, geoLat/geoLng, and the User row's
+    // email + passwordHash. `findFirst` lets the public + not-deleted guard
+    // live in the `where`, so `deletedAt` is never even selected.
+    return this.prisma.studentProfile.findFirst({
+      where: { sharableSlug: slug, isPublic: true, user: { deletedAt: null } },
+      select: {
+        fullName: true,
+        headline: true,
+        bio: true,
+        avatarUrl: true,
+        cgpa: true,
+        graduationYear: true,
+        location: true,
+        isPublic: true,
+        shareTheme: true,
+        shareSectionsOrder: true,
         user: {
-          include: {
-            institution: true,
+          select: {
+            id: true,
+            institution: { select: { name: true } },
             userSkills: {
-              include: { skill: true },
               where: { highestVerificationLayer: { not: 'L0_UNVERIFIED' } },
+              select: {
+                id: true,
+                selfRatedLevel: true,
+                highestVerificationLayer: true,
+                skill: { select: { name: true, category: true } },
+              },
             },
-            projects: true,
-            certifications: { where: { verificationStatus: 'verified' } },
+            projects: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                repoUrl: true,
+                liveUrl: true,
+                techStack: true,
+                stars: true,
+              },
+            },
+            certifications: {
+              where: { verificationStatus: 'verified' },
+              select: { id: true, issuer: true, courseName: true, tier: true },
+            },
           },
         },
       },
     });
-    // Hide soft-deleted users from public listing too (the user row stays
-    // for FK integrity, but their portfolio must not surface at /u/<slug>).
-    if (!profile || !profile.isPublic || profile.user.deletedAt) return null;
-    return profile;
   }
 
   private async mergeParsed(userId: string, parsed: ResumeParseResult) {
