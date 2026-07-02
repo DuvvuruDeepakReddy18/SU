@@ -18,7 +18,14 @@ import * as Sentry from '@sentry/node';
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly log = new Logger('Exception');
-  private readonly isDev = process.env.NODE_ENV !== 'production';
+  // Only surface raw error detail in an explicit dev/test env. Anything else
+  // (production, staging, preview, or a misconfigured NODE_ENV) masks internals
+  // — a leaked Prisma/driver message exposes table + column names. Unset counts
+  // as dev so local `nest start` (no NODE_ENV) still shows detail.
+  private readonly isDev =
+    !process.env.NODE_ENV ||
+    process.env.NODE_ENV === 'development' ||
+    process.env.NODE_ENV === 'test';
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();

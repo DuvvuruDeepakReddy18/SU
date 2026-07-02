@@ -26,10 +26,15 @@ export class CodeRunner {
   async run(language: Lang, code: string, stdin: string): Promise<NormalizedResult> {
     let backend = (process.env.CODE_RUNNER_BACKEND ?? 'auto').toLowerCase();
     // HARD SAFETY RAIL: the local runner executes user code UNSANDBOXED on the
-    // host (arbitrary RCE + fork-bomb). It must never run in production no
-    // matter what CODE_RUNNER_BACKEND says — force Judge0 (the real sandbox).
-    if (process.env.NODE_ENV === 'production' && backend !== 'judge0') {
-      this.log.warn(`Ignoring CODE_RUNNER_BACKEND=${backend} in production — forcing judge0.`);
+    // host (arbitrary RCE + fork-bomb). It may run ONLY in an explicit dev/test
+    // environment — force Judge0 (the real sandbox) everywhere else. Keyed on
+    // "is this dev-like?" (unset NODE_ENV counts as dev so local `nest start`
+    // works) rather than "=== production", so a staging / preview / typo'd
+    // NODE_ENV can't silently fall through to unsandboxed code execution.
+    const env = process.env.NODE_ENV;
+    const devLike = !env || env === 'development' || env === 'test';
+    if (!devLike && backend !== 'judge0') {
+      this.log.warn(`Ignoring CODE_RUNNER_BACKEND=${backend} in "${env}" — forcing judge0.`);
       backend = 'judge0';
     }
     const canLocal = language === 'python' || language === 'javascript';
