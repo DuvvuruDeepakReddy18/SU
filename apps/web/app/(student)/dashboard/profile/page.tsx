@@ -30,7 +30,7 @@ type Profile = {
   fullName: string;
   headline: string | null;
   bio: string | null;
-  phone: string | null;
+  phoneNumber: string | null;
   location: string | null;
   cgpa: number | null;
   graduationYear: number | null;
@@ -277,8 +277,8 @@ export default function ProfilePage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <Row label="Phone">
                   <Input
-                    value={form.phone ?? ''}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    value={form.phoneNumber ?? ''}
+                    onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
                   />
                 </Row>
                 <Row label="Location">
@@ -437,7 +437,7 @@ export default function ProfilePage() {
                 <ReadField label="Headline" value={profile.headline} />
                 <ReadField label="Bio" value={profile.bio} multiline />
                 <div className="grid gap-3 md:grid-cols-2">
-                  <ReadField label="Phone" value={profile.phone} />
+                  <ReadField label="Phone" value={profile.phoneNumber} />
                   <ReadField label="Location" value={profile.location} />
                   {/* CGPA + graduation year hidden until extraction is reliable. */}
                 </div>

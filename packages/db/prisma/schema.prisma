@@ -191,7 +191,6 @@ model StudentProfile {
   cgpaVerifiedAt DateTime?
   graduationYear Int?
   sharableSlug   String  @unique
-  phone          String?
   location       String?
   geoLat         Float?
   geoLng         Float?

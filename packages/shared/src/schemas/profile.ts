@@ -70,7 +70,7 @@ export const UpdateProfileSchema = z.object({
   fullName: z.string().min(1).max(120).optional(),
   headline: z.string().max(200).nullable().optional(),
   bio: z.string().max(2000).nullable().optional(),
-  phone: z.string().max(30).nullable().optional(),
+  phoneNumber: z.string().max(30).nullable().optional(),
   location: z.string().max(120).nullable().optional(),
   cgpa: z.number().min(0).max(10).nullable().optional(),
   graduationYear: z.number().int().min(2000).max(2100).nullable().optional(),
