@@ -23,11 +23,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // anyway, so this adds no real availability coupling.
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { deletedAt: true },
+      select: { deletedAt: true, role: true, institutionId: true },
     });
     if (!user || user.deletedAt) {
       throw new UnauthorizedException('This account is no longer active.');
     }
-    return payload;
+    // Trust the live role + institution from the DB over the values baked into
+    // the (up to 30d-lived) token, so a role or institution change takes effect
+    // on the next request instead of waiting for a re-login. Same indexed
+    // lookup we already do for the deletedAt check — no extra query.
+    return { ...payload, role: user.role, institutionId: user.institutionId };
   }
 }

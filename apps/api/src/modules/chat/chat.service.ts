@@ -125,7 +125,14 @@ export class ChatService {
     const rows = await this.prisma.userSkill.findMany({
       where: {
         highestVerificationLayer: { in: ['L1_ACADEMIC', 'L2_CERTIFIED', 'L3_PROVEN', 'L4_EXPERT'] },
-        user: { institutionId, id: { not: excludeUserId } },
+        user: {
+          institutionId,
+          id: { not: excludeUserId },
+          deletedAt: null,
+          // Respect the student's privacy toggle — never surface a private (or
+          // soft-deleted) profile's name/slug to same-institution peers.
+          studentProfile: { isPublic: true },
+        },
         skill: { name: { in: words, mode: 'insensitive' } },
       },
       include: {
