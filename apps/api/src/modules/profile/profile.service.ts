@@ -6,6 +6,58 @@ import { ResumeParser } from './resume-parser';
 import { QueueService } from '../../infra/queue/queue.service';
 import { QUEUE_NAMES, VERIFICATION_JOBS } from '../../infra/queue/queue.constants';
 import type { UpdateProfileDto } from './dto';
+import type { Prisma } from '@prisma/client';
+
+/**
+ * Portfolio-safe projection for the @Public() `GET /profile/public/:slug`
+ * endpoint. An explicit `select` (never a blanket `include`) is the privacy
+ * boundary — it structurally prevents leaking PII like governmentName,
+ * phone/phoneNumber, instituteEmail, resumeUrl, collegeId*, geoLat/geoLng, and
+ * the User row's email + passwordHash. Exported + asserted against a PII
+ * denylist in public-pii-boundary.spec.ts, so a stray field can never regress.
+ */
+export const PUBLIC_PROFILE_SELECT = {
+  fullName: true,
+  headline: true,
+  bio: true,
+  avatarUrl: true,
+  cgpa: true,
+  graduationYear: true,
+  location: true,
+  isPublic: true,
+  shareTheme: true,
+  shareSectionsOrder: true,
+  user: {
+    select: {
+      id: true,
+      institution: { select: { name: true } },
+      userSkills: {
+        where: { highestVerificationLayer: { not: 'L0_UNVERIFIED' } },
+        select: {
+          id: true,
+          selfRatedLevel: true,
+          highestVerificationLayer: true,
+          skill: { select: { name: true, category: true } },
+        },
+      },
+      projects: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          repoUrl: true,
+          liveUrl: true,
+          techStack: true,
+          stars: true,
+        },
+      },
+      certifications: {
+        where: { verificationStatus: 'verified' },
+        select: { id: true, issuer: true, courseName: true, tier: true },
+      },
+    },
+  },
+} satisfies Prisma.StudentProfileSelect;
 
 @Injectable()
 export class ProfileService {
@@ -108,48 +160,7 @@ export class ProfileService {
     // live in the `where`, so `deletedAt` is never even selected.
     return this.prisma.studentProfile.findFirst({
       where: { sharableSlug: slug, isPublic: true, user: { deletedAt: null } },
-      select: {
-        fullName: true,
-        headline: true,
-        bio: true,
-        avatarUrl: true,
-        cgpa: true,
-        graduationYear: true,
-        location: true,
-        isPublic: true,
-        shareTheme: true,
-        shareSectionsOrder: true,
-        user: {
-          select: {
-            id: true,
-            institution: { select: { name: true } },
-            userSkills: {
-              where: { highestVerificationLayer: { not: 'L0_UNVERIFIED' } },
-              select: {
-                id: true,
-                selfRatedLevel: true,
-                highestVerificationLayer: true,
-                skill: { select: { name: true, category: true } },
-              },
-            },
-            projects: {
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                repoUrl: true,
-                liveUrl: true,
-                techStack: true,
-                stars: true,
-              },
-            },
-            certifications: {
-              where: { verificationStatus: 'verified' },
-              select: { id: true, issuer: true, courseName: true, tier: true },
-            },
-          },
-        },
-      },
+      select: PUBLIC_PROFILE_SELECT,
     });
   }
 

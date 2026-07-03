@@ -1,6 +1,44 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { GeocodeService } from './geocode.service';
+import type { Prisma } from '@prisma/client';
+
+// Portfolio-safe provider projections for the @Public() freelance endpoints.
+// `select` (not `include`) on the provider User keeps its email/passwordHash
+// off the public wire. Exported + asserted against a PII denylist in
+// public-pii-boundary.spec.ts so this can never regress to a blanket include.
+export const FREELANCE_LIST_PROVIDER_SELECT = {
+  studentProfile: { select: { fullName: true, avatarUrl: true, sharableSlug: true } },
+} satisfies Prisma.UserSelect;
+
+export const FREELANCE_DETAIL_PROVIDER_SELECT = {
+  studentProfile: {
+    select: {
+      fullName: true,
+      avatarUrl: true,
+      sharableSlug: true,
+      headline: true,
+      bio: true,
+      location: true,
+      githubUrl: true,
+      linkedinUrl: true,
+      portfolioUrl: true,
+    },
+  },
+  institution: { select: { name: true } },
+  userSkills: {
+    include: { skill: true },
+    where: { highestVerificationLayer: { not: 'L0_UNVERIFIED' } },
+    take: 8,
+  },
+  // Proof of work: the provider's projects (verified work beats a free-text
+  // claim, so clients see real repos/demos).
+  projects: {
+    select: { id: true, title: true, repoUrl: true, liveUrl: true },
+    orderBy: { createdAt: 'desc' },
+    take: 6,
+  },
+} satisfies Prisma.UserSelect;
 
 @Injectable()
 export class FreelanceService {
@@ -30,51 +68,14 @@ export class FreelanceService {
           : {}),
       },
       orderBy,
-      include: {
-        provider: {
-          include: {
-            studentProfile: { select: { fullName: true, avatarUrl: true, sharableSlug: true } },
-          },
-        },
-      },
+      include: { provider: { select: FREELANCE_LIST_PROVIDER_SELECT } },
     });
   }
 
   async getById(id: string) {
     const svc = await this.prisma.freelanceService.findUnique({
       where: { id },
-      include: {
-        provider: {
-          include: {
-            studentProfile: {
-              select: {
-                fullName: true,
-                avatarUrl: true,
-                sharableSlug: true,
-                headline: true,
-                bio: true,
-                location: true,
-                githubUrl: true,
-                linkedinUrl: true,
-                portfolioUrl: true,
-              },
-            },
-            institution: { select: { name: true } },
-            userSkills: {
-              include: { skill: true },
-              where: { highestVerificationLayer: { not: 'L0_UNVERIFIED' } },
-              take: 8,
-            },
-            // Proof of work: the provider's projects (verified work beats a
-            // free-text claim — clients see real repos/demos).
-            projects: {
-              select: { id: true, title: true, repoUrl: true, liveUrl: true },
-              orderBy: { createdAt: 'desc' },
-              take: 6,
-            },
-          },
-        },
-      },
+      include: { provider: { select: FREELANCE_DETAIL_PROVIDER_SELECT } },
     });
     return svc;
   }
