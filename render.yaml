@@ -101,3 +101,58 @@ services:
       # error (safe). The API also hard-forces judge0 when NODE_ENV=production.
       - key: CODE_RUNNER_BACKEND
         value: judge0
+
+  # ===================================================================
+  # Staging mirror. A safe place to test risky changes (refresh-token
+  # rotation, Redis, CSP tightening) before they reach prod. Deploys from
+  # the `staging` branch. Point DATABASE_URL at a Neon BRANCH of prod (an
+  # isolated copy) and NEXTAUTH_URL / CORS_ORIGINS at the Vercel preview URL
+  # of the staging branch. Secrets are staging-only (generated), so a token
+  # signed in staging is never valid on prod. Full runbook in STAGING.md.
+  # Optional feature vars (S3_*, RESEND_API_KEY, SENTRY_DSN, RAZORPAY_*,
+  # OPENROUTER_API_KEY, REDIS_URL) no-op if unset; add them in the Render
+  # dashboard only when you want to exercise those features in staging.
+  # ===================================================================
+  - type: web
+    name: skillverify-api-staging
+    runtime: node
+    plan: free
+    region: singapore
+    branch: staging
+    rootDir: .
+    buildCommand: |
+      pnpm install --frozen-lockfile
+      pnpm --filter @skillverify/shared build
+      pnpm --filter @skillverify/db generate
+      pnpm --filter @skillverify/db build
+      pnpm --filter @skillverify/ui build
+      pnpm --filter @skillverify/api build
+    startCommand: |
+      pnpm --filter @skillverify/db migrate:deploy
+      node apps/api/dist/main.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production # prod-like behavior; full error detail still goes to Render logs
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false # Neon STAGING branch (isolated) — never the prod branch
+      - key: JWT_SECRET
+        generateValue: true # staging-only, so a staging token can't be used on prod
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: NEXTAUTH_URL
+        sync: false # the staging web preview URL (Vercel)
+      - key: CORS_ORIGINS
+        sync: false # same as NEXTAUTH_URL
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: CODE_RUNNER_BACKEND
+        value: judge0
