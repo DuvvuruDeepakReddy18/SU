@@ -64,7 +64,7 @@ services:
       - key: OPENROUTER_RESUME_MODEL
         value: openai/gpt-oss-120b:free
       - key: OPENROUTER_RESUME_FALLBACKS
-        value: deepseek/deepseek-v4-flash:free,nvidia/nemotron-3-super-120b-a12b:free
+        value: openai/gpt-oss-20b:free,meta-llama/llama-3.3-70b-instruct:free
       - key: OPENROUTER_FEEDBACK_MODEL
         value: openai/gpt-oss-20b:free
       - key: OPENROUTER_FEEDBACK_FALLBACKS

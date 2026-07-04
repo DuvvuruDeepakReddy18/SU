@@ -60,17 +60,26 @@ export class OpenRouterClient {
       } catch (e) {
         lastErr = e;
         const status = (e as { status?: number }).status;
-        const msg = (e as Error).message ?? '';
+        const msg = ((e as Error).message ?? '').toLowerCase();
+        // Rate-limited (429), out of quota (402), or the model was
+        // deprecated/removed (404 or "not a valid model") — none of which the
+        // NEXT model in the chain shares, so fall through and try it. Free
+        // OpenRouter model IDs churn constantly, so a stale id must never abort
+        // the whole chain (this was the resume-parse 500). Mirrors visionJson.
         if (
           status === 429 ||
           status === 402 ||
+          status === 404 ||
           msg.includes('rate-limit') ||
-          msg.includes('quota')
+          msg.includes('quota') ||
+          msg.includes('not a valid model') ||
+          msg.includes('no endpoints found')
         ) {
           this.log.warn(`${model} failed (${status}: ${msg.slice(0, 100)}), trying fallback`);
           continue;
         }
-        // Other errors (auth, model-not-found, bad request): give up
+        // Other errors (auth, malformed request): give up — they'd fail
+        // identically for every model.
         throw e;
       }
     }

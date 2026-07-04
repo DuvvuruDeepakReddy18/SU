@@ -1,4 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import type { ResumeParseResult } from '@skillverify/shared';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { StorageService } from '../../infra/storage/storage.service';
@@ -61,6 +68,8 @@ export const PUBLIC_PROFILE_SELECT = {
 
 @Injectable()
 export class ProfileService {
+  private readonly log = new Logger(ProfileService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
@@ -134,9 +143,19 @@ export class ProfileService {
       data: { resumeUrl: uploaded.url },
     });
 
-    const parsed = await this.parser.parse(file.buffer);
-    await this.mergeParsed(userId, parsed);
-    return { resumeUrl: uploaded.url, parsed };
+    // The file is already saved; a parse failure (AI busy / image-only PDF)
+    // should degrade to a clear message, not a masked 500.
+    try {
+      const parsed = await this.parser.parse(file.buffer);
+      await this.mergeParsed(userId, parsed);
+      return { resumeUrl: uploaded.url, parsed };
+    } catch (e) {
+      if (e instanceof HttpException) throw e;
+      this.log.error(`Resume parse failed for ${userId}: ${(e as Error).message}`);
+      throw new UnprocessableEntityException(
+        'Your resume was saved, but we could not read it automatically right now. Fill your profile in manually, or try again in a minute.',
+      );
+    }
   }
 
   /**
@@ -145,9 +164,17 @@ export class ProfileService {
    * users who don't want to upload a PDF).
    */
   async parseResumeText(userId: string, text: string) {
-    const parsed = await this.parser.parseText(text);
-    await this.mergeParsed(userId, parsed);
-    return { parsed };
+    try {
+      const parsed = await this.parser.parseText(text);
+      await this.mergeParsed(userId, parsed);
+      return { parsed };
+    } catch (e) {
+      if (e instanceof HttpException) throw e;
+      this.log.error(`Resume text parse failed for ${userId}: ${(e as Error).message}`);
+      throw new UnprocessableEntityException(
+        'We could not read that resume text right now. Please try again in a minute, or fill your profile in manually.',
+      );
+    }
   }
 
   async getPublicBySlug(slug: string) {

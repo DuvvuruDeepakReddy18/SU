@@ -9,10 +9,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 const VISION_MODELS = [
   // Free vision models on OpenRouter, in fallback order. The list is brittle
-  // (free quotas churn weekly) — set OPENROUTER_VISION_MODELS to override.
-  process.env.OPENROUTER_VISION_MODEL_PRIMARY ?? 'google/gemini-2.0-flash-exp:free',
-  process.env.OPENROUTER_VISION_MODEL_FALLBACK ?? 'meta-llama/llama-3.2-90b-vision-instruct:free',
-  'qwen/qwen2.5-vl-72b-instruct:free',
+  // (free model ids churn constantly), so override via OPENROUTER_VISION_MODEL_*
+  // env vars when they rot. Verified against the live model list 2026-07.
+  process.env.OPENROUTER_VISION_MODEL_PRIMARY ?? 'google/gemma-4-31b-it:free',
+  process.env.OPENROUTER_VISION_MODEL_FALLBACK ?? 'nvidia/nemotron-nano-12b-v2-vl:free',
+  'google/gemma-4-26b-a4b-it:free',
 ];
 
 const ExtractionSchema = z.object({

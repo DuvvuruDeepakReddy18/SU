@@ -10,9 +10,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { LayerEngine } from './layer-engine';
 
 const VISION_MODELS = [
-  process.env.OPENROUTER_VISION_MODEL_PRIMARY ?? 'google/gemini-2.0-flash-exp:free',
-  process.env.OPENROUTER_VISION_MODEL_FALLBACK ?? 'meta-llama/llama-3.2-90b-vision-instruct:free',
-  'qwen/qwen2.5-vl-72b-instruct:free',
+  // Free vision model ids churn constantly; override via
+  // OPENROUTER_VISION_MODEL_* env when they rot. Verified live 2026-07.
+  process.env.OPENROUTER_VISION_MODEL_PRIMARY ?? 'google/gemma-4-31b-it:free',
+  process.env.OPENROUTER_VISION_MODEL_FALLBACK ?? 'nvidia/nemotron-nano-12b-v2-vl:free',
+  'google/gemma-4-26b-a4b-it:free',
 ];
 
 const OcrSchema = z.object({
