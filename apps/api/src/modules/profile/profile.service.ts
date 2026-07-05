@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { ResumeParseResult } from '@skillverify/shared';
@@ -137,14 +138,24 @@ export class ProfileService {
     if (file.mimetype !== 'application/pdf') {
       throw new BadRequestException('Resume must be a PDF');
     }
-    const uploaded = await this.storage.upload(`resumes/${userId}`, file);
-    await this.prisma.studentProfile.update({
-      where: { userId },
-      data: { resumeUrl: uploaded.url },
-    });
+    // Save the file first. Surface the storage error *name* (AccessDenied /
+    // NoSuchBucket / InvalidAccessKeyId / SignatureDoesNotMatch / …) instead of
+    // a masked 500, so an S3 misconfiguration is diagnosable from the response.
+    let uploaded: { key: string; url: string };
+    try {
+      uploaded = await this.storage.upload(`resumes/${userId}`, file);
+      await this.prisma.studentProfile.update({
+        where: { userId },
+        data: { resumeUrl: uploaded.url },
+      });
+    } catch (e) {
+      const name = (e as { name?: string }).name ?? 'error';
+      this.log.error(`Resume file save failed for ${userId}: ${name}: ${(e as Error).message}`);
+      throw new ServiceUnavailableException(`Could not save your resume file (storage: ${name}).`);
+    }
 
-    // The file is already saved; a parse failure (AI busy / image-only PDF)
-    // should degrade to a clear message, not a masked 500.
+    // The file is saved; a parse failure (AI busy / image-only PDF) should
+    // degrade to a clear message, not a masked 500.
     try {
       const parsed = await this.parser.parse(file.buffer);
       await this.mergeParsed(userId, parsed);
