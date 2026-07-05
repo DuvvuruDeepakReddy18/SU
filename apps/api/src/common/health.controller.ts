@@ -20,7 +20,13 @@ export class HealthController {
   @Get('config')
   config() {
     return {
-      storage: !!(process.env.S3_ENDPOINT && process.env.S3_KEY && process.env.S3_SECRET),
+      // Trim to match StorageService: a whitespace-only value looks present but
+      // disables uploads, so report it as off here too (keeps the UI honest).
+      storage: !!(
+        process.env.S3_ENDPOINT?.trim() &&
+        process.env.S3_KEY?.trim() &&
+        process.env.S3_SECRET?.trim()
+      ),
       ai: !!process.env.OPENROUTER_API_KEY,
       github: !!process.env.GITHUB_CLIENT_ID,
       google: !!process.env.GOOGLE_CLIENT_ID,

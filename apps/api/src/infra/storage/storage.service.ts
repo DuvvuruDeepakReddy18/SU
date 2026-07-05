@@ -26,7 +26,17 @@ export class StorageService {
     this.bucket = (process.env.S3_BUCKET ?? 'skillverify').trim();
     this.publicUrl = process.env.S3_PUBLIC_URL?.trim() || `http://localhost:9000/${this.bucket}`;
     if (!endpoint || !accessKeyId || !secretAccessKey) {
-      this.log.warn('S3 not configured — file uploads will return a clear error.');
+      // Name the culprit(s). A common cause is an env var pasted as a blank
+      // line or with only whitespace: it looks "set" (passes the /config
+      // presence check) but trims to empty here, silently disabling uploads.
+      const missing = [
+        !endpoint && 'S3_ENDPOINT',
+        !accessKeyId && 'S3_KEY',
+        !secretAccessKey && 'S3_SECRET',
+      ].filter(Boolean);
+      this.log.warn(
+        `S3 not configured, file uploads disabled. Missing or blank: ${missing.join(', ')}.`,
+      );
       this.client = null;
       return;
     }
