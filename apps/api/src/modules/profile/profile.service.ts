@@ -149,13 +149,12 @@ export class ProfileService {
         data: { resumeUrl: uploaded.url },
       });
     } catch (e) {
-      const err = e as { name?: string; message?: string };
-      this.log.error(`Resume file save failed for ${userId}: ${err.name}: ${err.message}`);
-      // Temporary: surface the real storage error (name + message) so the S3
-      // misconfig is diagnosable from the toast. Contains no secret (the S3
-      // secret key never appears in AWS error text); tighten once resolved.
+      // Full detail to the server logs; a clean, non-leaking message to the user.
+      this.log.error(
+        `Resume file save failed for ${userId}: ${(e as Error).name}: ${(e as Error).message}`,
+      );
       throw new ServiceUnavailableException(
-        `Could not save your resume file [${err.name ?? 'Error'}]: ${(err.message ?? '').slice(0, 200)}`,
+        'Could not save your resume file right now. Please try again in a minute.',
       );
     }
 
