@@ -1,8 +1,10 @@
-name: Keep API warm
+name: Keep services warm
 
 # Render's free web service spins down after ~15 min of no traffic, so the next
 # request pays a ~50s cold start. This pings /health every ~10 min to keep the
-# instance awake.
+# instance awake. It also pings Supabase storage, whose free project pauses
+# after ~7 days idle (which silently breaks every file upload — resume, avatar,
+# verification docs). Any request to the project domain counts as activity.
 #
 # Trade-off: staying up 24/7 uses ~730 of the free 750 instance-hours/month —
 # fine as your ONLY free Render service. If you add more free services or want
@@ -21,3 +23,9 @@ jobs:
     steps:
       - name: Ping health endpoint
         run: curl -fsS -m 90 https://skillverify-api.onrender.com/api/v1/health || true
+
+      - name: Ping Supabase storage (prevent auto-pause)
+        # The project ref is not a secret (it's in every public storage URL the
+        # app serves). The response code doesn't matter — the request is what
+        # keeps the project active — so ignore failures.
+        run: curl -sS -m 30 -o /dev/null https://rkxdzxsyflqlfzlxvere.storage.supabase.co/storage/v1/s3 || true
