@@ -313,3 +313,96 @@ function hideLoader() { if (filmLoader) filmLoader.classList.add('done'); }
   }
   pump();
 })();
+
+/* ------------------------------------------------------------
+   Portal wheel — weapon-wheel-style selector. Press P (or tap the
+   trigger) to open; hover/arrow to a portal, click/Enter to enter it.
+   ------------------------------------------------------------ */
+(function portalWheel() {
+  const overlay = document.getElementById('portalWheel');
+  const svg = overlay && overlay.querySelector('.wheel-svg');
+  const stage = overlay && overlay.querySelector('.wheel-stage');
+  const titleEl = document.getElementById('wheelTitle');
+  const subEl = document.getElementById('wheelSub');
+  const trigger = document.getElementById('wheelTrigger');
+  if (!overlay || !svg || !stage) return;
+
+  // Portals in place of the reference's guns. Each selects that portal's entry.
+  const PORTALS = [
+    { label: 'Students', icon: '🎓', href: '/login', sub: 'Sign in or get verified' },
+    { label: 'Recruiters', icon: '💼', href: '/company/signup', sub: 'Hire verified talent' },
+    { label: 'Institutions', icon: '🏛️', href: '/institution/signup', sub: 'Onboard your campus' },
+    { label: 'Interviewers', icon: '🎯', href: '/login', sub: 'Conduct L4 interviews' },
+    { label: 'Admin', icon: '⚙️', href: '/login', sub: 'Platform administration' },
+  ];
+  const N = PORTALS.length;
+  const NS = 'http://www.w3.org/2000/svg';
+  const CX = 200, CY = 200, R = 190, r = 118, GAP = 3.5; // viewBox 400, donut ring, deg gap
+
+  const polar = (radius, deg) => {
+    const a = ((deg - 90) * Math.PI) / 180; // -90 so segment 0 sits at the top
+    return [CX + radius * Math.cos(a), CY + radius * Math.sin(a)];
+  };
+  const segPath = (a1, a2) => {
+    const [ox1, oy1] = polar(R, a1), [ox2, oy2] = polar(R, a2);
+    const [ix2, iy2] = polar(r, a2), [ix1, iy1] = polar(r, a1);
+    const large = a2 - a1 > 180 ? 1 : 0;
+    return `M ${ox1} ${oy1} A ${R} ${R} 0 ${large} 1 ${ox2} ${oy2} L ${ix2} ${iy2} A ${r} ${r} 0 ${large} 0 ${ix1} ${iy1} Z`;
+  };
+
+  const segEls = [], labelEls = [];
+  let selected = 0;
+
+  PORTALS.forEach((p, i) => {
+    const a1 = (360 / N) * i + GAP / 2;
+    const a2 = (360 / N) * (i + 1) - GAP / 2;
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', segPath(a1, a2));
+    path.setAttribute('class', 'wheel-seg');
+    path.addEventListener('mouseenter', () => select(i));
+    path.addEventListener('click', () => go(i));
+    svg.appendChild(path);
+    segEls.push(path);
+
+    const [lx, ly] = polar((R + r) / 2, (a1 + a2) / 2);
+    const label = document.createElement('div');
+    label.className = 'wheel-label';
+    label.style.left = `${(lx / 400) * 100}%`;
+    label.style.top = `${(ly / 400) * 100}%`;
+    label.innerHTML = `<span class="wl-icon">${p.icon}</span><span class="wl-name">${p.label}</span>`;
+    label.addEventListener('mouseenter', () => select(i));
+    label.addEventListener('click', () => go(i));
+    stage.appendChild(label);
+    labelEls.push(label);
+  });
+
+  function select(i) {
+    selected = (i + N) % N;
+    segEls.forEach((el, j) => el.classList.toggle('active', j === selected));
+    labelEls.forEach((el, j) => el.classList.toggle('active', j === selected));
+    if (titleEl) titleEl.textContent = PORTALS[selected].label;
+    if (subEl) subEl.textContent = PORTALS[selected].sub;
+  }
+  function go(i) { window.location.href = PORTALS[(i + N) % N].href; }
+
+  let open = false;
+  function setOpen(v) {
+    open = v;
+    overlay.classList.toggle('open', v);
+    overlay.setAttribute('aria-hidden', v ? 'false' : 'true');
+    if (v) select(0);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    const typing = /^(input|textarea|select)$/i.test(tag);
+    if (!typing && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); setOpen(!open); return; }
+    if (!open) return;
+    if (e.key === 'Escape') setOpen(false);
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); select(selected + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); select(selected - 1); }
+    else if (e.key === 'Enter') go(selected);
+  });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) setOpen(false); });
+  if (trigger) trigger.addEventListener('click', () => setOpen(!open));
+})();

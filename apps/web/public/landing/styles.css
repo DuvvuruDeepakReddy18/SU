@@ -317,6 +317,61 @@ body.cursor-on .cursor-dot, body.cursor-on .cursor-ring { opacity: 1; }
 body.cursor-hover .cursor-ring { width: 50px; height: 50px; }
 @media (pointer: coarse) { .cursor-dot, .cursor-ring { display: none; } }
 
+/* ---------- portal wheel (weapon-wheel style, opens with P) ---------- */
+.wheel-trigger {
+  position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 55;
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text); background: rgba(10,12,18,0.7); border: 1px solid var(--line);
+  padding: 0.6rem 0.9rem; border-radius: 999px; cursor: pointer; backdrop-filter: blur(10px);
+  transition: transform 0.3s var(--ease-out), border-color 0.3s, box-shadow 0.3s;
+}
+.wheel-trigger:hover { transform: translateY(-2px); border-color: rgba(25,209,153,0.55); box-shadow: 0 10px 30px rgba(25,209,153,0.22); }
+.wheel-trigger i { font-style: normal; color: var(--green); font-size: 1rem; }
+.wheel-trigger kbd {
+  font-family: var(--font-mono); font-size: 0.62rem; color: var(--green);
+  border: 1px solid rgba(25,209,153,0.4); border-radius: 5px; padding: 0.05rem 0.35rem; background: rgba(25,209,153,0.08);
+}
+@media (max-width: 620px) { .wheel-trigger kbd { display: none; } }
+
+.wheel-overlay {
+  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 45%, rgba(5,6,10,0.7), rgba(3,4,7,0.92));
+  backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity 0.35s var(--ease-out);
+}
+.wheel-overlay.open { opacity: 1; pointer-events: auto; }
+.wheel-stage { position: relative; width: min(84vmin, 560px); aspect-ratio: 1; }
+.wheel-svg { width: 100%; height: 100%; display: block; transform: scale(0.9) rotate(-6deg); opacity: 0; transition: transform 0.4s var(--ease-out), opacity 0.4s; }
+.wheel-overlay.open .wheel-svg { transform: scale(1) rotate(0); opacity: 1; }
+
+.wheel-seg {
+  fill: rgba(255,255,255,0.045); stroke: var(--line); stroke-width: 1.5; cursor: pointer;
+  transition: fill 0.22s var(--ease-out), stroke 0.22s;
+}
+.wheel-seg:hover { fill: rgba(255,255,255,0.08); }
+.wheel-seg.active { fill: rgba(25,209,153,0.2); stroke: var(--green); filter: drop-shadow(0 0 12px rgba(25,209,153,0.45)); }
+
+.wheel-label {
+  position: absolute; transform: translate(-50%, -50%); text-align: center; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 0.25rem; width: 6.5rem;
+  color: var(--muted); transition: color 0.22s, transform 0.22s var(--ease-out); pointer-events: auto;
+}
+.wheel-label .wl-icon { font-size: 1.7rem; line-height: 1; }
+.wheel-label .wl-name { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.wheel-label.active { color: var(--text); transform: translate(-50%, -50%) scale(1.08); }
+.wheel-label.active .wl-icon { filter: drop-shadow(0 0 8px rgba(25,209,153,0.5)); }
+
+.wheel-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; pointer-events: none; padding: 0 26%;
+}
+.wheel-eyebrow { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--faint); }
+.wheel-title { font-family: var(--font-head); font-weight: 900; font-size: clamp(1.4rem, 4.4vmin, 2rem); letter-spacing: -0.02em; margin: 0.35rem 0 0.15rem; }
+.wheel-sub { color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+.wheel-go { margin-top: 0.7rem; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--green); }
+.wheel-esc { position: absolute; bottom: 1.4rem; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--faint); }
+@media (max-width: 620px) { .wheel-esc { bottom: 0.8rem; } .wheel-label { width: 5rem; } .wheel-label .wl-icon { font-size: 1.4rem; } }
+
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; transition-duration: 0.001s !important; }

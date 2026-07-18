@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,600;0,800;0,900;1,900&family=Instrument+Serif:ital@0;1&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/landing/styles.css?v=5" />
+<link rel="stylesheet" href="/landing/styles.css?v=6" />
 <link rel="preload" as="image" href="/landing/frames/frame_000.webp" fetchpriority="high" />
 </head>
 <body>
@@ -310,12 +310,29 @@
     <p class="foot-fine">© 2026 Skill Vaults · proof, not noise · made in India</p>
   </footer>
 
+  <!-- ===== portal wheel (weapon-wheel style) — open with P, or tap the trigger ===== -->
+  <div id="portalWheel" class="wheel-overlay" aria-hidden="true" role="dialog" aria-label="Choose a portal">
+    <div class="wheel-stage">
+      <svg class="wheel-svg" viewBox="0 0 400 400" aria-hidden="true"></svg>
+      <div class="wheel-center">
+        <p class="wheel-eyebrow">choose your portal</p>
+        <p class="wheel-title" id="wheelTitle">Students</p>
+        <p class="wheel-sub" id="wheelSub">Sign in or get verified</p>
+        <p class="wheel-go">select ↵</p>
+      </div>
+    </div>
+    <p class="wheel-esc">Esc to close · ← → to rotate</p>
+  </div>
+  <button id="wheelTrigger" class="wheel-trigger" type="button" aria-label="Open the portal wheel">
+    <i>⌾</i> Portals <kbd>P</kbd>
+  </button>
+
   <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
   <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
 
   <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script src="/landing/main.js?v=6" defer></script>
+  <script src="/landing/main.js?v=7" defer></script>
 </body>
 </html>
